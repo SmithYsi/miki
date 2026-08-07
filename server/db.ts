@@ -1,0 +1,271 @@
+import { DatabaseSync } from "node:sqlite";
+import { mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import seed from "./seed-data.js";
+import { hashPassword } from "./auth.js";
+
+const dataDir = join(dirname(fileURLToPath(import.meta.url)), "data");
+mkdirSync(dataDir, { recursive: true });
+
+export const db = new DatabaseSync(join(dataDir, "miki.db"));
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_id INTEGER NOT NULL REFERENCES categories(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  price INTEGER NOT NULL,
+  tags TEXT NOT NULL DEFAULT '[]',
+  image_url TEXT NOT NULL DEFAULT '',
+  available INTEGER NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  description TEXT,
+  date TEXT NOT NULL,
+  time TEXT NOT NULL,
+  type TEXT NOT NULL CHECK(type IN ('evento','fiesta','programa')),
+  price INTEGER,
+  capacity INTEGER,
+  spots_taken INTEGER NOT NULL DEFAULT 0,
+  image_url TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS reservas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  date TEXT NOT NULL,
+  time TEXT NOT NULL,
+  guests INTEGER NOT NULL,
+  notes TEXT,
+  status TEXT NOT NULL DEFAULT 'pendiente',
+  created_at TEXT NOT NULL,
+  UNIQUE(name, date, time)
+);
+CREATE TABLE IF NOT EXISTS horarios (
+  day TEXT PRIMARY KEY,
+  open TEXT,
+  close TEXT,
+  closed INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'empleado' CHECK(role IN ('admin','empleado')),
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sessions (
+  token TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS event_inscripciones (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(event_id, email)
+);
+CREATE INDEX IF NOT EXISTS idx_inscripciones_event ON event_inscripciones(event_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
+`);
+
+const count = (table: string) => (db.prepare(`SELECT COUNT(*) c FROM ${table}`).get() as { c: number }).c;
+
+if (count("categories") === 0) {
+  const insCat = db.prepare("INSERT INTO categories (name, description, sort_order) VALUES (?, ?, ?)");
+  const insItem = db.prepare(
+    "INSERT INTO items (category_id, name, description, price, tags, image_url, available, sort_order) VALUES (?, ?, ?, ?, '[]', ?, 1, ?)"
+  );
+  const insEvent = db.prepare(
+    "INSERT INTO events (title, description, date, time, type, price, capacity, spots_taken, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  );
+  const insHorario = db.prepare("INSERT INTO horarios (day, open, close, closed) VALUES (?, ?, ?, ?)");
+
+  seed.categories.forEach((cat, ci) => {
+    insCat.run(cat.name, cat.description, ci + 1);
+    cat.items.forEach((item, ii) => {
+      insItem.run(ci + 1, item.name, item.description, item.price, "", ii + 1);
+    });
+  });
+
+  seed.events.forEach((e) => {
+    insEvent.run(e.title, e.description, e.date, e.time, e.type, e.price, e.capacity, e.spots_taken, e.image);
+  });
+
+  seed.horarios.forEach((h) => insHorario.run(h.day, h.open, h.close, h.closed ? 1 : 0));
+}
+
+if (count("users") === 0) {
+  const email = (process.env.ADMIN_EMAIL ?? "admin@cafemiki.mx").trim().toLowerCase();
+  const pass = process.env.ADMIN_PASS ?? "admin123";
+  if (process.env.NODE_ENV === "production" && !process.env.ADMIN_PASS) {
+    throw new Error("ADMIN_PASS es obligatorio en producción para crear el usuario admin.");
+  }
+  db.prepare("INSERT INTO users (email, password_hash, name, role, created_at) VALUES (?, ?, 'Admin', 'admin', ?)")
+    .run(email, hashPassword(pass), new Date().toISOString());
+}
+
+export function getMenu() {
+  const categories = db.prepare("SELECT id, name, description, sort_order FROM categories ORDER BY sort_order").all();
+  const items = db
+    .prepare("SELECT id, category_id, name, description, price, tags, image_url, available, sort_order FROM items ORDER BY category_id, sort_order")
+    .all()
+    .map((r: any) => ({ ...r, tags: JSON.parse(r.tags), available: !!r.available }));
+  return { categories, items };
+}
+
+export function getEvents() {
+  return db
+    .prepare("SELECT id, title, description, date, time, type, price, capacity, spots_taken, image_url FROM events ORDER BY date, time")
+    .all();
+}
+
+export class DuplicateReservaError extends Error {}
+
+export function insertReserva(r: {
+  name: string; email: string; phone: string; date: string; time: string; guests: number; notes?: string;
+}) {
+  const created_at = new Date().toISOString();
+  try {
+    const { lastInsertRowid } = db
+      .prepare("INSERT INTO reservas (name, email, phone, date, time, guests, notes, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', ?)")
+      .run(r.name, r.email, r.phone, r.date, r.time, r.guests, r.notes ?? null, created_at);
+    return { id: Number(lastInsertRowid), status: "pendiente", ...r };
+  } catch (err) {
+    if (String(err).includes("UNIQUE")) throw new DuplicateReservaError("Ya existe una reserva con ese nombre, fecha y hora.");
+    throw err;
+  }
+}
+
+export function getHorarios() {
+  return db
+    .prepare("SELECT day, open, close, closed FROM horarios ORDER BY CASE day WHEN 'Lunes' THEN 1 WHEN 'Martes' THEN 2 WHEN 'Miércoles' THEN 3 WHEN 'Jueves' THEN 4 WHEN 'Viernes' THEN 5 WHEN 'Sábado' THEN 6 ELSE 7 END")
+    .all()
+    .map((r: any) => ({ day: r.day, open: r.open, close: r.close, closed: !!r.closed }));
+}
+
+export function createUser(email: string, passwordHash: string, name: string, role: "admin" | "empleado") {
+  db.prepare("INSERT INTO users (email, password_hash, name, role, created_at) VALUES (?, ?, ?, ?, ?)")
+    .run(email, passwordHash, name, role, new Date().toISOString());
+}
+
+export function getUserByEmail(email: string) {
+  return db.prepare("SELECT id, email, password_hash, name, role FROM users WHERE email = ?").get(email) as
+    | { id: number; email: string; password_hash: string; name: string; role: "admin" | "empleado" }
+    | undefined;
+}
+
+export function insertSession(token: string, userId: number, createdAt: string, expiresAt: string) {
+  db.prepare("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)")
+    .run(token, userId, createdAt, expiresAt);
+}
+
+/** Devuelve el usuario de una sesión activa; borra sesiones expiradas (expiración perezosa). */
+export function getSessionUser(token: string) {
+  const row = db.prepare(
+    "SELECT u.id, u.email, u.name, u.role, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?"
+  ).get(token) as { id: number; email: string; name: string; role: "admin" | "empleado"; expires_at: string } | undefined;
+  if (!row) return undefined;
+  if (row.expires_at <= new Date().toISOString()) {
+    db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
+    return undefined;
+  }
+  return { id: row.id, email: row.email, name: row.name, role: row.role };
+}
+
+export function deleteSession(token: string) {
+  db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
+}
+
+export class JoinEventError extends Error {
+  code: "duplicado" | "lleno";
+  constructor(code: "duplicado" | "lleno") {
+    super(code === "duplicado" ? "Ya tienes un lugar apartado en este evento con ese correo." : "El evento está lleno.");
+    this.code = code;
+  }
+}
+
+export function joinEvent(eventId: number, name: string, email: string) {
+  const evento = db.prepare("SELECT id, capacity, spots_taken FROM events WHERE id = ?").get(eventId) as
+    | { id: number; capacity: number | null; spots_taken: number }
+    | undefined;
+  if (!evento) return null;
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare("INSERT INTO event_inscripciones (event_id, name, email, created_at) VALUES (?, ?, ?, ?)")
+      .run(eventId, name, email, new Date().toISOString());
+    if (evento.capacity !== null) {
+      const r = db.prepare("UPDATE events SET spots_taken = spots_taken + 1 WHERE id = ? AND spots_taken < capacity").run(eventId);
+      if (r.changes === 0) throw new JoinEventError("lleno");
+    } else {
+      db.prepare("UPDATE events SET spots_taken = spots_taken + 1 WHERE id = ?").run(eventId);
+    }
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    if (err instanceof JoinEventError) throw err;
+    if (String(err).includes("UNIQUE")) throw new JoinEventError("duplicado");
+    throw err;
+  }
+
+  const final = db.prepare("SELECT id, capacity, spots_taken FROM events WHERE id = ?").get(eventId) as
+    | { id: number; capacity: number | null; spots_taken: number }
+    | undefined;
+  const inscripcion = db.prepare("SELECT id, event_id, name, email, created_at FROM event_inscripciones WHERE event_id = ? AND email = ? ORDER BY id DESC LIMIT 1").get(eventId, email) as
+    | { id: number; event_id: number; name: string; email: string; created_at: string }
+    | undefined;
+  return {
+    id: inscripcion!.id,
+    event_id: inscripcion!.event_id,
+    name: inscripcion!.name,
+    email: inscripcion!.email,
+    created_at: inscripcion!.created_at,
+    spots_taken: final!.spots_taken,
+    spots_left: final!.capacity === null ? null : final!.capacity - final!.spots_taken,
+  };
+}
+
+const RESERVA_FIELDS = "id, name, email, phone, date, time, guests, notes, status, created_at";
+
+export function getReservas(status?: string) {
+  const rows = status
+    ? db.prepare(`SELECT ${RESERVA_FIELDS} FROM reservas WHERE status = ? ORDER BY date, time`).all(status)
+    : db.prepare(`SELECT ${RESERVA_FIELDS} FROM reservas ORDER BY date, time`).all();
+  return rows as unknown as ReservaRow[];
+}
+
+export function setReservaStatus(id: number, status: string) {
+  const r = db.prepare(`UPDATE reservas SET status = ? WHERE id = ?`).run(status, id);
+  if (r.changes === 0) return null;
+  return db.prepare(`SELECT ${RESERVA_FIELDS} FROM reservas WHERE id = ?`).get(id) as unknown as ReservaRow;
+}
+
+export interface ReservaRow {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  date: string;
+  time: string;
+  guests: number;
+  notes: string | null;
+  status: string;
+  created_at: string;
+}

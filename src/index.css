@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-sans: "Outfit", system-ui, "Segoe UI", sans-serif;
+
+  /* Light: negro/blanco puros + un solo acento (naranja quemado) */
+  --color-cream: #ffffff;
+  --color-latte: #ffffff;
+  --color-espresso: #000000;
+  --color-coffee: #161616;
+  --color-mocha: #454545;
+  --color-accent: #a14a1f;
+
+  /* Dark */
+  --color-night: #000000;
+  --color-raise: #0a0a0a;
+  --color-bone: #ffffff;
+  --color-bone-dim: #a1a1aa;
+  --color-accent-soft: #e08a55;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+    }
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 4.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    @apply bg-cream font-sans text-espresso antialiased dark:bg-night dark:text-bone;
+  }
+
+  ::selection {
+    @apply bg-accent text-cream dark:bg-accent-soft dark:text-night;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent dark:outline-accent-soft;
+  }
+}
+
+@layer utilities {
+  /* Puntos de guía editorial entre nombre y precio en la carta */
+  .menu-leader {
+    @apply mx-3 flex-1 border-b border-dotted border-mocha/40 dark:border-bone-dim/30;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Cinta infinita de testimonios: el track duplica el contenido y se desplaza -50%. */
+.marquee-track {
+  animation: marquee 48s linear infinite;
+}
+
+.marquee:hover .marquee-track,
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Skeleton shimmer: luz en fondos claros (carta), oscuros (eventos/admin). */
+.skeleton {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.06) 25%, rgba(0, 0, 0, 0.15) 50%, rgba(0, 0, 0, 0.06) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
+
+.skeleton-dark {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 25%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.06) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+  .skeleton,
+  .skeleton-dark {
+    animation: none;
+  }
+}
