@@ -1,33 +1,29 @@
+import { useCallback, useEffect, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
+import { getTestimonios } from '../lib/api'
+import type { Testimonio } from '../lib/types'
+import { Button } from './Button'
 import { Reveal } from './Reveal'
 
-const TESTIMONIOS = [
-  {
-    cita: 'El mejor cold brew de la Roma, y la sala es perfecta para trabajar una tarde entera.',
-    nombre: 'Karla G.',
-    rol: 'Clienta de la colonia',
-  },
-  {
-    cita: 'Fui a la catación de orígenes y salí entendiendo el café de otra manera. Guiada y cercana.',
-    nombre: 'Diego M.',
-    rol: 'Asistente a la catación',
-  },
-  {
-    cita: 'El brunch de domingo se volvió nuestro plan fijo. El pan francés con cajeta es imperdible.',
-    nombre: 'Ana y Luis',
-    rol: 'Clientes frecuentes',
-  },
-  {
-    cita: 'Reservé una mesa para una fecha especial y todo salió perfecto: el trato, el café y la música.',
-    nombre: 'Sofía R.',
-    rol: 'Reserva para aniversario',
-  },
-]
-
-type Testimonio = (typeof TESTIMONIOS)[number]
+type State =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; items: Testimonio[] }
 
 export function Testimonios() {
   const reduce = useReducedMotion()
+  const [state, setState] = useState<State>({ status: 'loading' })
+
+  const load = useCallback(() => {
+    setState({ status: 'loading' })
+    getTestimonios()
+      .then((items) => setState({ status: 'ready', items }))
+      .catch((e: unknown) =>
+        setState({ status: 'error', message: e instanceof Error ? e.message : 'No pudimos cargar los testimonios' }),
+      )
+  }, [])
+
+  useEffect(load, [load])
 
   return (
     <section className="border-y border-bone/10 bg-night py-24 md:py-32">
@@ -42,11 +38,27 @@ export function Testimonios() {
         </Reveal>
       </div>
 
-      {/* prefers-reduced-motion → grilla estática */}
-      {reduce ? (
+      {state.status === 'loading' ? (
+        <div className="mx-auto mt-12 grid max-w-6xl gap-6 px-5 md:grid-cols-2 md:px-8 lg:grid-cols-4" aria-busy="true">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-64 skeleton-dark" />
+          ))}
+        </div>
+      ) : state.status === 'error' ? (
+        <div className="mx-auto mt-12 max-w-6xl px-5 text-center md:px-8">
+          <p className="text-bone-dim">{state.message}</p>
+          <Button tone="dark" className="mt-4" onClick={load}>
+            Reintentar
+          </Button>
+        </div>
+      ) : state.items.length === 0 ? (
+        <p className="mx-auto mt-12 max-w-6xl px-5 text-bone-dim md:px-8">
+          Aún no hay testimonios. Pronto compartiremos lo que dicen de la casa.
+        </p>
+      ) : reduce ? (
         <div className="mx-auto mt-12 grid max-w-6xl gap-6 px-5 md:grid-cols-2 md:px-8 lg:grid-cols-4">
-          {TESTIMONIOS.map((t) => (
-            <Tarjeta key={t.nombre} t={t} ancho="w-full" />
+          {state.items.map((t) => (
+            <Tarjeta key={t.id} t={t} ancho="w-full" />
           ))}
         </div>
       ) : (
@@ -54,8 +66,8 @@ export function Testimonios() {
           <div className="marquee-track flex w-max">
             {[0, 1].map((mitad) => (
               <div key={mitad} aria-hidden={mitad === 1} className="flex shrink-0 gap-6 pr-6">
-                {TESTIMONIOS.map((t) => (
-                  <Tarjeta key={t.nombre} t={t} ancho="w-[82vw] sm:w-[22rem]" />
+                {state.items.map((t) => (
+                  <Tarjeta key={t.id} t={t} ancho="w-[82vw] sm:w-[22rem]" />
                 ))}
               </div>
             ))}
