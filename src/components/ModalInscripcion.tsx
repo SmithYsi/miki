@@ -1,7 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { z } from 'zod'
-import { inscribirseEvento } from '../lib/api'
+import { cancelarInscripcion, inscribirseEvento } from '../lib/api'
 import type { EventItem, EventJoin } from '../lib/types'
 import { Button } from './Button'
 
@@ -9,6 +9,8 @@ const schema = z.object({
   name: z.string().min(2, 'Escribe tu nombre completo'),
   email: z.email('Escribe un correo válido'),
 })
+
+const cancelSchema = z.object({ email: z.email('Escribe un correo válido') })
 
 interface Valores {
   name: string
@@ -36,6 +38,9 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmado, setConfirmado] = useState<EventJoin | null>(null)
+  const [vista, setVista] = useState<'unirse' | 'cancelar'>('unirse')
+  const [emailCancelar, setEmailCancelar] = useState('')
+  const [cancelada, setCancelada] = useState(false)
 
   const enfocarables = () => {
     if (!dialogo.current) return []
@@ -55,6 +60,9 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
       setErrores({})
       setError(null)
       setConfirmado(null)
+      setVista('unirse')
+      setEmailCancelar('')
+      setCancelada(false)
     }
     prevAbierto.current = abierto
   }, [abierto])
@@ -89,7 +97,7 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
       document.body.style.overflow = prev
       window.removeEventListener('keydown', onKey)
     }
-  }, [abierto, onCerrar, confirmado])
+  }, [abierto, onCerrar, confirmado, vista, cancelada])
 
   const set = (campo: keyof Valores) => (e: { target: { value: string } }) => {
     setValores((v) => ({ ...v, [campo]: e.target.value }))
@@ -117,6 +125,26 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
       onInscrito(res)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No pudimos apartar tu lugar. Inténtalo de nuevo.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  const alCancelar = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!evento) return
+    setError(null)
+    const r = cancelSchema.safeParse({ email: emailCancelar })
+    if (!r.success) {
+      setError(r.error.issues[0].message)
+      return
+    }
+    setEnviando(true)
+    try {
+      await cancelarInscripcion(evento.id, r.data.email)
+      setCancelada(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No pudimos cancelar tu inscripción. Inténtalo de nuevo.')
     } finally {
       setEnviando(false)
     }
@@ -177,6 +205,17 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
                   Entendido
                 </Button>
               </div>
+            ) : cancelada ? (
+              <div className="mt-8">
+                <h3 className="font-display text-2xl font-medium">Listo, inscripción cancelada</h3>
+                <p className="mt-3 leading-relaxed text-mocha dark:text-bone-dim">
+                  Liberamos tu lugar para <strong className="text-espresso dark:text-bone">{evento.title}</strong>. Si
+                  cambias de opinión, siempre puedes apartarlo de nuevo.
+                </p>
+                <Button className="mt-8 w-full" onClick={onCerrar}>
+                  Entendido
+                </Button>
+              </div>
             ) : (
               <form className="mt-6 space-y-5" onSubmit={alEnviar} noValidate>
                 <p className="border border-accent/30 bg-accent/5 px-3 py-2 text-sm text-espresso dark:border-accent-soft/30 dark:bg-accent-soft/5 dark:text-bone">
@@ -218,6 +257,56 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
                   Te confirmamos por correo. Sin anticipo.
                 </p>
               </form>
+            )}
+
+            {!confirmado && !cancelada && (
+              <div className="mt-6 border-t border-espresso/15 pt-4 dark:border-bone/15">
+                {vista === 'unirse' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVista('cancelar')
+                      setError(null)
+                    }}
+                    className="text-sm text-mocha underline-offset-4 transition-colors hover:text-accent hover:underline dark:text-bone-dim dark:hover:text-bone"
+                  >
+                    ¿Ya apartaste lugar y no podrás asistir? Cáncelo aquí
+                  </button>
+                ) : (
+                  <form onSubmit={alCancelar} noValidate className="space-y-4">
+                    <p className="text-sm text-mocha dark:text-bone-dim">
+                      Escribe el correo con el que apartaste tu lugar.
+                    </p>
+                    <Campo label="Correo" error={errores.email}>
+                      <input
+                        type="email"
+                        autoComplete="email"
+                        value={emailCancelar}
+                        onChange={(e) => setEmailCancelar(e.target.value)}
+                        className={inputCls(false)}
+                        placeholder="tucorreo@ejemplo.mx"
+                      />
+                    </Campo>
+                    {error && (
+                      <p role="alert" className="text-sm text-red-800 dark:text-red-300">
+                        {error}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button type="submit" variant="ghost" disabled={enviando}>
+                        {enviando ? 'Cancelando…' : 'Cancelar inscripción'}
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => setVista('unirse')}
+                        className="text-sm text-mocha underline-offset-4 transition-colors hover:text-espresso hover:underline dark:text-bone-dim dark:hover:text-bone"
+                      >
+                        Volver
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
             )}
           </motion.div>
         </div>
