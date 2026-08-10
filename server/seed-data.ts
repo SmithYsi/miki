@@ -152,6 +152,19 @@ export const events: CafeEvent[] = [
   },
 ];
 
+export interface Testimonio {
+  cita: string;
+  nombre: string;
+  rol: string;
+}
+
+export const testimonios: Testimonio[] = [
+  { cita: "El mejor cold brew de la Roma, y la sala es perfecta para trabajar una tarde entera.", nombre: "Karla G.", rol: "Clienta de la colonia" },
+  { cita: "Fui a la catación de orígenes y salí entendiendo el café de otra manera. Guiada y cercana.", nombre: "Diego M.", rol: "Asistente a la catación" },
+  { cita: "El brunch de domingo se volvió nuestro plan fijo. El pan francés con cajeta es imperdible.", nombre: "Ana y Luis", rol: "Clientes frecuentes" },
+  { cita: "Reservé una mesa para una fecha especial y todo salió perfecto: el trato, el café y la música.", nombre: "Sofía R.", rol: "Reserva para aniversario" },
+];
+
 export const horarios: DayHours[] = [
   { day: "Lunes", open: "08:00", close: "20:00", closed: false },
   { day: "Martes", open: "08:00", close: "20:00", closed: false },
@@ -162,4 +175,4 @@ export const horarios: DayHours[] = [
   { day: "Domingo", open: "09:00", close: "15:00", closed: false },
 ];
 
-export default { categories, events, horarios };
+export default { categories, events, horarios, testimonios };

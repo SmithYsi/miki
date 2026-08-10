@@ -1,14 +1,21 @@
 import express from "express";
 import cors from "cors";
 import { randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import {
   getMenu,
   getEvents,
+  getTestimonios,
   insertReserva,
   getHorarios,
   DuplicateReservaError,
   joinEvent,
+  cancelJoinEvent,
+  insertMensaje,
+  subscribeNewsletter,
   JoinEventError,
   getUserByEmail,
   getReservas,
@@ -53,6 +60,7 @@ function makeRateLimit(limit: number, windowMs: number, message: string) {
 
 const limitReservas = makeRateLimit(10, 10 * 60 * 1000, "Demasiadas reservas en poco tiempo. Inténtalo en unos minutos.");
 const limitInscripciones = makeRateLimit(10, 10 * 60 * 1000, "Demasiadas solicitudes en poco tiempo. Inténtalo en unos minutos.");
+const limitContacto = makeRateLimit(10, 10 * 60 * 1000, "Demasiados mensajes en poco tiempo. Inténtalo en unos minutos.");
 const limitLogin = makeRateLimit(5, 10 * 60 * 1000, "Demasiados intentos. Inténtalo en unos minutos.");
 
 // ponytail: backoff por cuenta (clave = email) contra fuerza bruta, además del límite por IP.
@@ -75,7 +83,19 @@ function limitLoginAccount(req: express.Request, res: express.Response, next: ex
 
 app.get("/api/menu", (_req, res) => res.json(getMenu()));
 
-app.get("/api/events", (_req, res) => res.json(getEvents()));
+const eventTypeSchema = z.enum(["evento", "fiesta", "programa"], { message: "Tipo de evento inválido." });
+
+app.get("/api/events", (req, res) => {
+  const raw = req.query.type;
+  if (raw !== undefined) {
+    const parsed = eventTypeSchema.safeParse(raw);
+    if (!parsed.success) return res.status(400).json({ error: "Tipo de evento inválido." });
+    return res.json(getEvents(parsed.data));
+  }
+  res.json(getEvents());
+});
+
+app.get("/api/testimonios", (_req, res) => res.json(getTestimonios()));
 
 app.get("/api/horarios", (_req, res) => res.json(getHorarios()));
 
@@ -119,6 +139,43 @@ app.post("/api/events/:id/join", limitInscripciones, (req, res) => {
     if (err instanceof JoinEventError) return res.status(409).json({ error: err.message });
     throw err;
   }
+});
+
+const cancelSchema = z.object({
+  email: z.email("Ingresa un correo electrónico válido."),
+});
+
+app.post("/api/events/:id/cancel", (req, res) => {
+  const parsed = cancelSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "Datos inválidos.";
+    return res.status(400).json({ error: msg });
+  }
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(404).json({ error: "No encontramos una inscripción con ese correo." });
+
+  const resultado = cancelJoinEvent(id, parsed.data.email);
+  if (!resultado) return res.status(404).json({ error: "No encontramos una inscripción con ese correo." });
+  res.json(resultado);
+});
+
+const contactoSchema = z.object({
+  nombre: z.string().trim().min(1, "El nombre es obligatorio.").max(80, "El nombre es demasiado largo."),
+  email: z.email("Ingresa un correo electrónico válido."),
+  mensaje: z.string().max(1000, "El mensaje es demasiado largo.").optional(),
+  newsletter: z.boolean().optional(),
+});
+
+app.post("/api/contacto", limitContacto, (req, res) => {
+  const parsed = contactoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "Datos inválidos.";
+    return res.status(400).json({ error: msg });
+  }
+  const { nombre, email, mensaje, newsletter } = parsed.data;
+  insertMensaje(nombre, email, mensaje ?? null);
+  if (newsletter) subscribeNewsletter(email);
+  res.status(201).json({ ok: true });
 });
 
 const loginSchema = z.object({
@@ -178,6 +235,17 @@ app.patch("/api/admin/reservas/:id", requireAuth, requireAdmin, (req, res) => {
   if (!actualizada) return res.status(404).json({ error: "Reserva no encontrada." });
   res.json(actualizada);
 });
+
+// En producción (dist/ presente), sirve el build del frontend y hace fallback SPA
+// para navegación directa (solo GET con Accept: text/html; nunca para /api).
+const dist = join(dirname(dirname(fileURLToPath(import.meta.url))), "dist");
+if (existsSync(dist)) {
+  app.use(express.static(dist));
+  app.get("/*splat", (req, res, next) => {
+    if (req.path.startsWith("/api") || !req.accepts("html")) return next();
+    res.sendFile(join(dist, "index.html"));
+  });
+}
 
 app.use((_req, res) => {
   res.status(404).json({ error: "No encontrado." });

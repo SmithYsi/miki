@@ -2,13 +2,15 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import seed from "./seed-data.js";
+import seed, { type EventType } from "./seed-data.js";
 import { hashPassword } from "./auth.js";
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), "data");
 mkdirSync(dataDir, { recursive: true });
 
-export const db = new DatabaseSync(join(dataDir, "miki.db"));
+// ponytail: timeout para esperar locks de otros procesos (tests corren en paralelo
+// con el dev server y entre sí); sin esto un arranque concurrente muere con SQLITE_BUSY.
+export const db = new DatabaseSync(join(dataDir, "miki.db"), { timeout: 5000 });
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS categories (
@@ -81,6 +83,24 @@ CREATE TABLE IF NOT EXISTS event_inscripciones (
   created_at TEXT NOT NULL,
   UNIQUE(event_id, email)
 );
+CREATE TABLE IF NOT EXISTS testimonios (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cita TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  rol TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS mensajes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL,
+  email TEXT NOT NULL,
+  mensaje TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS newsletter (
+  email TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_inscripciones_event ON event_inscripciones(event_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
 `);
@@ -111,6 +131,11 @@ if (count("categories") === 0) {
   seed.horarios.forEach((h) => insHorario.run(h.day, h.open, h.close, h.closed ? 1 : 0));
 }
 
+if (count("testimonios") === 0) {
+  const insTestimonio = db.prepare("INSERT INTO testimonios (cita, nombre, rol, sort_order) VALUES (?, ?, ?, ?)");
+  seed.testimonios.forEach((t, i) => insTestimonio.run(t.cita, t.nombre, t.rol, i + 1));
+}
+
 if (count("users") === 0) {
   const email = (process.env.ADMIN_EMAIL ?? "admin@cafemiki.mx").trim().toLowerCase();
   const pass = process.env.ADMIN_PASS ?? "admin123";
@@ -130,10 +155,16 @@ export function getMenu() {
   return { categories, items };
 }
 
-export function getEvents() {
-  return db
-    .prepare("SELECT id, title, description, date, time, type, price, capacity, spots_taken, image_url FROM events ORDER BY date, time")
-    .all();
+export function getEvents(type?: EventType) {
+  const sql = type
+    ? "SELECT id, title, description, date, time, type, price, capacity, spots_taken, image_url FROM events WHERE date >= date('now') AND type = ? ORDER BY date, time"
+    : "SELECT id, title, description, date, time, type, price, capacity, spots_taken, image_url FROM events WHERE date >= date('now') ORDER BY date, time";
+  const stmt = db.prepare(sql);
+  return type ? stmt.all(type) : stmt.all();
+}
+
+export function getTestimonios() {
+  return db.prepare("SELECT id, cita, nombre, rol FROM testimonios ORDER BY sort_order").all();
 }
 
 export class DuplicateReservaError extends Error {}
@@ -242,8 +273,35 @@ export function joinEvent(eventId: number, name: string, email: string) {
   };
 }
 
-const RESERVA_FIELDS = "id, name, email, phone, date, time, guests, notes, status, created_at";
+/** Cancela una inscripción: borra el registro y decrementa spots_taken. Devuelve null si no existe. */
+export function cancelJoinEvent(eventId: number, email: string) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const r = db.prepare("DELETE FROM event_inscripciones WHERE event_id = ? AND email = ?").run(eventId, email);
+    if (r.changes === 0) {
+      db.exec("ROLLBACK");
+      return null;
+    }
+    db.prepare("UPDATE events SET spots_taken = MAX(0, spots_taken - 1) WHERE id = ?").run(eventId);
+    db.exec("COMMIT");
+    return { ok: true };
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+}
 
+export function insertMensaje(nombre: string, email: string, mensaje: string | null) {
+  db.prepare("INSERT INTO mensajes (nombre, email, mensaje, created_at) VALUES (?, ?, ?, ?)")
+    .run(nombre, email, mensaje, new Date().toISOString());
+}
+
+/** Suscribe al newsletter; el duplicado se ignora silenciosamente (INSERT OR IGNORE). */
+export function subscribeNewsletter(email: string) {
+  db.prepare("INSERT OR IGNORE INTO newsletter (email, created_at) VALUES (?, ?)").run(email, new Date().toISOString());
+}
+
+const RESERVA_FIELDS = "id, name, email, phone, date, time, guests, notes, status, created_at";
 export function getReservas(status?: string) {
   const rows = status
     ? db.prepare(`SELECT ${RESERVA_FIELDS} FROM reservas WHERE status = ? ORDER BY date, time`).all(status)
