@@ -3,9 +3,11 @@ import { Reveal } from './Reveal'
 import { useHorarios } from '../lib/useHorarios'
 import { resumenHorario } from '../lib/horario'
 import { CONTACT } from '../lib/contact'
+import { FormularioContacto } from './FormularioContacto'
 
-const MAPA_URL =
-  'https://www.google.com/maps?q=Colonia%20Roma%20Norte%2C%20Ciudad%20de%20M%C3%A9xico&output=embed'
+const DIRECCION_ENC = encodeURIComponent(`${CONTACT.address}, ${CONTACT.city}`)
+const MAPA_URL = `https://maps.google.com/maps?q=${DIRECCION_ENC}&hl=es&z=16&output=embed`
+const COMO_LLEGAR_URL = `https://www.google.com/maps/dir/?api=1&destination=${DIRECCION_ENC}`
 
 const SOCIALES = [
   {
@@ -84,16 +86,37 @@ export function Contacto({ onReservar }: { onReservar: () => void }) {
           </div>
         </Reveal>
 
-        <Reveal delay={0.1} className="min-h-[320px]">
-          <iframe
-            src={MAPA_URL}
-            title="Mapa de ubicación de Café Miki"
-            loading="lazy"
-            className="h-full min-h-[320px] w-full border-0 lg:h-[520px]"
-            referrerPolicy="no-referrer-when-downgrade"
-            allowFullScreen
-          />
-        </Reveal>
+        <div className="space-y-10">
+          <Reveal delay={0.1} className="min-h-[320px]">
+            <div className="relative flex h-full min-h-[320px] flex-col lg:h-[520px]">
+              <iframe
+                src={MAPA_URL}
+                title="Mapa de ubicación de Café Miki en la Colonia Roma Norte, Ciudad de México"
+                aria-label="Mapa de ubicación de Café Miki"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+                className="h-[320px] w-full flex-1 border-0 lg:h-full"
+              />
+              <div className="border border-espresso/10 bg-cream/95 p-5 backdrop-blur-sm lg:absolute lg:bottom-5 lg:left-5 lg:max-w-xs">
+                <p className="font-display text-lg leading-snug text-espresso">{CONTACT.address}</p>
+                <p className="mt-0.5 text-sm text-mocha">{CONTACT.city}</p>
+                <a
+                  href={COMO_LLEGAR_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex items-center justify-center gap-2 border border-espresso/25 px-5 py-2.5 text-sm font-medium tracking-wide text-espresso transition-colors hover:border-accent hover:text-accent"
+                >
+                  Cómo llegar →
+                </a>
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.15}>
+            <FormularioContacto />
+          </Reveal>
+        </div>
       </div>
     </section>
   )
