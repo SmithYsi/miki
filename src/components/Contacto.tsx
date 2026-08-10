@@ -86,38 +86,36 @@ export function Contacto({ onReservar }: { onReservar: () => void }) {
           </div>
         </Reveal>
 
-        <div className="space-y-10">
-          <Reveal delay={0.1} className="min-h-[320px]">
-            <div className="relative flex h-full min-h-[320px] flex-col lg:h-[520px]">
-              <iframe
-                src={MAPA_URL}
-                title="Mapa de ubicación de Café Miki en la Colonia Roma Norte, Ciudad de México"
-                aria-label="Mapa de ubicación de Café Miki"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-                className="h-[320px] w-full flex-1 border-0 lg:h-full"
-              />
-              <div className="border border-espresso/10 bg-cream/95 p-5 backdrop-blur-sm lg:absolute lg:bottom-5 lg:left-5 lg:max-w-xs">
-                <p className="font-display text-lg leading-snug text-espresso">{CONTACT.address}</p>
-                <p className="mt-0.5 text-sm text-mocha">{CONTACT.city}</p>
-                <a
-                  href={COMO_LLEGAR_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-flex items-center justify-center gap-2 border border-espresso/25 px-5 py-2.5 text-sm font-medium tracking-wide text-espresso transition-colors hover:border-accent hover:text-accent"
-                >
-                  Cómo llegar →
-                </a>
-              </div>
+        <Reveal delay={0.1} className="min-h-[320px]">
+          <div className="relative flex h-full min-h-[320px] flex-col lg:h-[520px]">
+            <iframe
+              src={MAPA_URL}
+              title="Mapa de ubicación de Café Miki en la Colonia Roma Norte, Ciudad de México"
+              aria-label="Mapa de ubicación de Café Miki"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+              className="h-[320px] w-full flex-1 border-0 lg:h-full"
+            />
+            <div className="border border-espresso/10 bg-cream/95 p-5 backdrop-blur-sm lg:absolute lg:bottom-5 lg:left-5 lg:max-w-xs">
+              <p className="font-display text-lg leading-snug text-espresso">{CONTACT.address}</p>
+              <p className="mt-0.5 text-sm text-mocha">{CONTACT.city}</p>
+              <a
+                href={COMO_LLEGAR_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center justify-center gap-2 border border-espresso/25 px-5 py-2.5 text-sm font-medium tracking-wide text-espresso transition-colors hover:border-accent hover:text-accent"
+              >
+                Cómo llegar →
+              </a>
             </div>
-          </Reveal>
-
-          <Reveal delay={0.15} className="flex justify-center">
-            <FormularioContacto />
-          </Reveal>
-        </div>
+          </div>
+        </Reveal>
       </div>
+
+      <Reveal delay={0.15} className="mx-auto mt-14 flex w-full max-w-6xl justify-center px-5 md:px-8">
+        <FormularioContacto />
+      </Reveal>
     </section>
   )
 }
