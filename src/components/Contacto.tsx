@@ -113,7 +113,7 @@ export function Contacto({ onReservar }: { onReservar: () => void }) {
             </div>
           </Reveal>
 
-          <Reveal delay={0.15}>
+          <Reveal delay={0.15} className="flex justify-center">
             <FormularioContacto />
           </Reveal>
         </div>

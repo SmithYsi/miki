@@ -57,7 +57,7 @@ export function FormularioContacto() {
   }
 
   return (
-    <div className="border border-espresso/10 bg-cream p-6 sm:p-8">
+    <div className="w-full max-w-md border border-espresso/10 bg-cream p-6 sm:p-8">
       {enviado ? (
         <div>
           <p

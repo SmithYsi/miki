@@ -67,18 +67,6 @@ export function Hero({ onReservar }: { onReservar: () => void }) {
           </Button>
         </motion.div>
       </motion.div>
-
-      <motion.div
-        aria-hidden="true"
-        style={{ opacity: fade }}
-        className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 text-cream/60"
-      >
-        <motion.span
-          className="block h-10 w-px bg-cream/50"
-          animate={reduce ? undefined : { scaleY: [0, 1, 0.6], originY: 0 }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      </motion.div>
     </section>
   )
 }
