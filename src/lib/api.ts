@@ -7,6 +7,7 @@ import type {
   ReservaAdmin,
   ReservaInput,
   ReservaStatus,
+  Testimonio,
   Usuario,
 } from './types'
 
@@ -52,12 +53,9 @@ export const getMenu = () => request<Menu>('/api/menu')
 
 export const getEvents = () => request<EventItem[]>('/api/events')
 
-let horariosCache: Promise<Horario[]> | null = null
+export const getHorarios = () => request<Horario[]>('/api/horarios')
 
-export const getHorarios = () => {
-  horariosCache ??= request<Horario[]>('/api/horarios')
-  return horariosCache
-}
+export const getTestimonios = () => request<Testimonio[]>('/api/testimonios')
 
 export async function crearReserva(data: ReservaInput): Promise<Reserva> {
   return request<Reserva>('/api/reservas', {
@@ -70,6 +68,22 @@ export async function crearReserva(data: ReservaInput): Promise<Reserva> {
 /** Apartar lugar en un evento (contrato API v2). */
 export const inscribirseEvento = (id: number, data: { name: string; email: string }) =>
   request<EventJoin>(`/api/events/${id}/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+
+/** Cancelar inscripción a un evento (contrato API v2). */
+export const cancelarInscripcion = (id: number, email: string) =>
+  request<{ ok: true }>(`/api/events/${id}/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+
+/** Enviar mensaje de contacto (contrato API v2). */
+export const enviarContacto = (data: { nombre: string; email: string; mensaje?: string; newsletter?: boolean }) =>
+  request<{ ok: true }>('/api/contacto', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),

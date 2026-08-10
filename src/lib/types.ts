@@ -72,6 +72,14 @@ export interface EventJoin {
   spots_left: number | null
 }
 
+/** Testimonio de GET /api/testimonios */
+export interface Testimonio {
+  id: number
+  cita: string
+  nombre: string
+  rol: string
+}
+
 export type Rol = 'admin' | 'empleado'
 
 export interface Usuario {
