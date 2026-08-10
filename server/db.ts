@@ -8,9 +8,9 @@ import { hashPassword } from "./auth.js";
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), "data");
 mkdirSync(dataDir, { recursive: true });
 
-// ponytail: timeout para esperar locks de otros procesos (tests corren en paralelo
-// con el dev server y entre sí); sin esto un arranque concurrente muere con SQLITE_BUSY.
-export const db = new DatabaseSync(join(dataDir, "miki.db"), { timeout: 5000 });
+// ponytail: MIKI_DB_PATH permite apuntar a otra DB (los tests usan ":memory:" via server/test-setup).
+// timeout para esperar locks de otros procesos (tests en paralelo); sin esto muere con SQLITE_BUSY.
+export const db = new DatabaseSync(process.env.MIKI_DB_PATH ?? join(dataDir, "miki.db"), { timeout: 5000 });
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS categories (

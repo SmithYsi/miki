@@ -267,6 +267,7 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
                     onClick={() => {
                       setVista('cancelar')
                       setError(null)
+                      setErrores({})
                     }}
                     className="text-sm text-mocha underline-offset-4 transition-colors hover:text-accent hover:underline dark:text-bone-dim dark:hover:text-bone"
                   >
@@ -277,21 +278,19 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
                     <p className="text-sm text-mocha dark:text-bone-dim">
                       Escribe el correo con el que apartaste tu lugar.
                     </p>
-                    <Campo label="Correo" error={errores.email}>
+                    <Campo label="Correo" error={error ?? undefined}>
                       <input
                         type="email"
                         autoComplete="email"
                         value={emailCancelar}
-                        onChange={(e) => setEmailCancelar(e.target.value)}
-                        className={inputCls(false)}
+                        onChange={(e) => {
+                          setEmailCancelar(e.target.value)
+                          setError(null)
+                        }}
+                        className={inputCls(!!error)}
                         placeholder="tucorreo@ejemplo.mx"
                       />
                     </Campo>
-                    {error && (
-                      <p role="alert" className="text-sm text-red-800 dark:text-red-300">
-                        {error}
-                      </p>
-                    )}
                     <div className="flex flex-wrap items-center gap-3">
                       <Button type="submit" variant="ghost" disabled={enviando}>
                         {enviando ? 'Cancelando…' : 'Cancelar inscripción'}

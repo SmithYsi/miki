@@ -1,3 +1,4 @@
+import "./test-setup.js";
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { hashPassword, verifyPassword, generateToken, createSession } from "./auth.js";

@@ -132,7 +132,7 @@ app.post("/api/events/:id/join", limitInscripciones, (req, res) => {
   if (!Number.isInteger(id) || id <= 0) return res.status(404).json({ error: "Evento no encontrado." });
 
   try {
-    const resultado = joinEvent(id, parsed.data.name, parsed.data.email);
+    const resultado = joinEvent(id, parsed.data.name, parsed.data.email.trim().toLowerCase());
     if (!resultado) return res.status(404).json({ error: "Evento no encontrado." });
     res.status(201).json(resultado);
   } catch (err) {
@@ -145,7 +145,7 @@ const cancelSchema = z.object({
   email: z.email("Ingresa un correo electrónico válido."),
 });
 
-app.post("/api/events/:id/cancel", (req, res) => {
+app.post("/api/events/:id/cancel", limitInscripciones, (req, res) => {
   const parsed = cancelSchema.safeParse(req.body);
   if (!parsed.success) {
     const msg = parsed.error.issues[0]?.message ?? "Datos inválidos.";
@@ -154,7 +154,8 @@ app.post("/api/events/:id/cancel", (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(404).json({ error: "No encontramos una inscripción con ese correo." });
 
-  const resultado = cancelJoinEvent(id, parsed.data.email);
+  // ponytail: email normalizado a minúsculas para que cancelar coincida con el join (case-insensitive).
+  const resultado = cancelJoinEvent(id, parsed.data.email.trim().toLowerCase());
   if (!resultado) return res.status(404).json({ error: "No encontramos una inscripción con ese correo." });
   res.json(resultado);
 });
@@ -173,8 +174,9 @@ app.post("/api/contacto", limitContacto, (req, res) => {
     return res.status(400).json({ error: msg });
   }
   const { nombre, email, mensaje, newsletter } = parsed.data;
-  insertMensaje(nombre, email, mensaje ?? null);
-  if (newsletter) subscribeNewsletter(email);
+  const emailNorm = email.trim().toLowerCase();
+  insertMensaje(nombre, emailNorm, mensaje?.trim() || null);
+  if (newsletter) subscribeNewsletter(emailNorm);
   res.status(201).json({ ok: true });
 });
 
