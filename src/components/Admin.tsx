@@ -173,7 +173,7 @@ export function Admin() {
         {auth.status === 'logueado' && (
           <section aria-label="Reservas">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrar por estado">
+              <div className="flex flex-wrap gap-2" aria-label="Filtrar por estado">
                 {FILTROS.map((f) => (
                   <Tab key={f.key} tone="dark" selected={filtro === f.key} onClick={() => setFiltro(f.key)}>
                     {f.label}

@@ -59,7 +59,6 @@ export function Carta() {
         <Reveal delay={0.05}>
           <div
             className="mt-10 flex flex-wrap gap-2"
-            role="tablist"
             aria-label="Categorías de la carta"
           >
             {categories.map((cat) => (
