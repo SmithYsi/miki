@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getEvents } from '../lib/api'
-import type { EventItem, EventJoin, EventType } from '../lib/types'
+import type { EventCancel, EventItem, EventJoin, EventType } from '../lib/types'
 import { Button } from './Button'
 import { ModalInscripcion } from './ModalInscripcion'
 import { Reveal } from './Reveal'
@@ -58,6 +58,15 @@ export function Eventos() {
     )
   }, [])
 
+  // Mismo path al cancelar: libera lugar, el card deja de mostrar "Lleno"
+  const alCancelado = useCallback((r: EventCancel) => {
+    setState((s) =>
+      s.status === 'ready'
+        ? { ...s, events: s.events.map((e) => (e.id === r.event_id ? { ...e, spots_taken: r.spots_taken } : e)) }
+        : s,
+    )
+  }, [])
+
   if (state.status === 'loading') return <SkeletonEventos />
   if (state.status === 'error')
     return (
@@ -87,7 +96,7 @@ export function Eventos() {
         </Reveal>
 
         <Reveal delay={0.05}>
-          <div className="mt-8 flex flex-wrap gap-2" role="tablist" aria-label="Filtrar eventos">
+          <div className="mt-8 flex flex-wrap gap-2" aria-label="Filtrar eventos">
             {FILTROS.map((f) => (
               <Tab key={f.key} tone="dark" selected={filtro === f.key} onClick={() => setFiltro(f.key)}>
                 {f.label}
@@ -119,6 +128,7 @@ export function Eventos() {
         evento={inscripcion}
         onCerrar={() => setInscripcion(null)}
         onInscrito={alInscrito}
+        onCancelado={alCancelado}
       />
     </section>
   )
@@ -133,6 +143,10 @@ function EventCard({
   destacado?: boolean
   onInscribir: () => void
 }) {
+  const ahora = new Date()
+  const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`
+  const hora = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`
+  const terminado = evento.date === hoy && evento.time <= hora
   const lleno = evento.capacity !== null && evento.capacity - evento.spots_taken <= 0
   // ponytail: capacity null = evento sin límite, no hay nada que apartar → sin botón.
   // lleno → etiqueta "Lleno" en lugar del botón.
@@ -169,7 +183,9 @@ function EventCard({
           </span>
           <span>{metaLugares(evento)}</span>
         </div>
-        {lleno ? (
+        {terminado ? (
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-bone-dim">Terminado</p>
+        ) : lleno ? (
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent-soft">Lleno</p>
         ) : conCupo ? (
           <Button tone="dark" className="self-start" onClick={onInscribir}>

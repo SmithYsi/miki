@@ -2,7 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { cancelarInscripcion, inscribirseEvento } from '../lib/api'
-import type { EventItem, EventJoin } from '../lib/types'
+import type { EventCancel, EventItem, EventJoin } from '../lib/types'
 import { Button } from './Button'
 
 const schema = z.object({
@@ -24,15 +24,18 @@ interface Props {
   onCerrar: () => void
   /** Se llama con la respuesta al éxito para refrescar el contador del card. */
   onInscrito: (r: EventJoin) => void
+  /** Se llama con los spots actualizados al cancelar para refrescar el contador del card. */
+  onCancelado: (r: EventCancel) => void
 }
 
 const fmtFecha = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
 
-export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
+export function ModalInscripcion({ evento, onCerrar, onInscrito, onCancelado }: Props) {
   const reduce = useReducedMotion()
   const abierto = evento !== null
   const dialogo = useRef<HTMLDivElement>(null)
+  const enviandoRef = useRef(false)
   const [valores, setValores] = useState<Valores>({ name: '', email: '' })
   const [errores, setErrores] = useState<Errores>({})
   const [enviando, setEnviando] = useState(false)
@@ -118,6 +121,8 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
       setErrores(er)
       return
     }
+    if (enviandoRef.current) return
+    enviandoRef.current = true
     setEnviando(true)
     try {
       const res = await inscribirseEvento(evento.id, r.data)
@@ -127,6 +132,7 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
       setError(err instanceof Error ? err.message : 'No pudimos apartar tu lugar. Inténtalo de nuevo.')
     } finally {
       setEnviando(false)
+      enviandoRef.current = false
     }
   }
 
@@ -139,14 +145,18 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
       setError(r.error.issues[0].message)
       return
     }
+    if (enviandoRef.current) return
+    enviandoRef.current = true
     setEnviando(true)
     try {
-      await cancelarInscripcion(evento.id, r.data.email)
+      const res = await cancelarInscripcion(evento.id, r.data.email)
       setCancelada(true)
+      onCancelado({ ...res, event_id: evento.id })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No pudimos cancelar tu inscripción. Inténtalo de nuevo.')
     } finally {
       setEnviando(false)
+      enviandoRef.current = false
     }
   }
 
@@ -216,7 +226,7 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
                   Entendido
                 </Button>
               </div>
-            ) : (
+            ) : vista === 'unirse' ? (
               <form className="mt-6 space-y-5" onSubmit={alEnviar} noValidate>
                 <p className="border border-accent/30 bg-accent/5 px-3 py-2 text-sm text-espresso dark:border-accent-soft/30 dark:bg-accent-soft/5 dark:text-bone">
                   {evento.title} — {fmtFecha(evento.date)} · {evento.time} h
@@ -257,7 +267,7 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito }: Props) {
                   Te confirmamos por correo. Sin anticipo.
                 </p>
               </form>
-            )}
+            ) : null}
 
             {!confirmado && !cancelada && (
               <div className="mt-6 border-t border-espresso/15 pt-4 dark:border-bone/15">

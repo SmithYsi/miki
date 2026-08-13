@@ -5,6 +5,7 @@ import type { Horario } from './types'
 export function useHorarios() {
   const [horarios, setHorarios] = useState<Horario[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [intento, setIntento] = useState(0)
 
   useEffect(() => {
     let vivo = true
@@ -14,7 +15,12 @@ export function useHorarios() {
     return () => {
       vivo = false
     }
-  }, [])
+  }, [intento])
 
-  return { horarios, error }
+  const recargar = () => {
+    setError(null)
+    setIntento((n) => n + 1)
+  }
+
+  return { horarios, error, recargar }
 }

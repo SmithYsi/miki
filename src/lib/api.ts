@@ -1,4 +1,5 @@
 import type {
+  CancelResponse,
   EventItem,
   EventJoin,
   Horario,
@@ -73,9 +74,9 @@ export const inscribirseEvento = (id: number, data: { name: string; email: strin
     body: JSON.stringify(data),
   })
 
-/** Cancelar inscripción a un evento (contrato API v2). */
+/** Cancelar inscripción a un evento (contrato API v2: devuelve spots actualizados). */
 export const cancelarInscripcion = (id: number, email: string) =>
-  request<{ ok: true }>(`/api/events/${id}/cancel`, {
+  request<CancelResponse>(`/api/events/${id}/cancel`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),

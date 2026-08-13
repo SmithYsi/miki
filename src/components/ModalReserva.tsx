@@ -8,7 +8,10 @@ import { Button } from './Button'
 
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
 
-const hoy = () => new Date().toLocaleDateString('en-CA')
+const hoy = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 const schema = z.object({
   name: z.string().min(2, 'Escribe tu nombre completo'),
@@ -47,13 +50,14 @@ interface Props {
 
 export function ModalReserva({ abierto, onCerrar }: Props) {
   const reduce = useReducedMotion()
-  const { horarios } = useHorarios()
+  const { horarios, error: errorHorarios, recargar: recargarHorarios } = useHorarios()
   const [valores, setValores] = useState<FormValues>(INICIAL)
   const [errores, setErrores] = useState<Errores>({})
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmada, setConfirmada] = useState<Reserva | null>(null)
   const dialogo = useRef<HTMLDivElement>(null)
+  const enviandoRef = useRef(false)
 
   const horasDisponibles = useMemo(() => {
     if (!valores.date) return []
@@ -61,10 +65,15 @@ export function ModalReserva({ abierto, onCerrar }: Props) {
     const h = horarios.find((x) => x.day.toLowerCase() === dia)
     if (!h || h.closed || !h.open || !h.close) return []
     const [a, b] = [h.open, h.close].map((t) => Number(t.slice(0, 2)))
+    const ahora = new Date()
+    const ahoraStr = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`
+    const esHoy = valores.date === hoy()
     const horas: string[] = []
     for (let hh = a; hh <= b; hh++) {
-      horas.push(`${String(hh).padStart(2, '0')}:00`)
-      if (hh < b) horas.push(`${String(hh).padStart(2, '0')}:30`)
+      const t00 = `${String(hh).padStart(2, '0')}:00`
+      const t30 = `${String(hh).padStart(2, '0')}:30`
+      if (!esHoy || t00 > ahoraStr) horas.push(t00)
+      if (hh < b && (!esHoy || t30 > ahoraStr)) horas.push(t30)
     }
     return horas
   }, [valores.date, horarios])
@@ -153,6 +162,8 @@ export function ModalReserva({ abierto, onCerrar }: Props) {
       setErrores(er)
       return
     }
+    if (enviandoRef.current) return
+    enviandoRef.current = true
     setEnviando(true)
     try {
       const res = await crearReserva(r.data)
@@ -161,6 +172,7 @@ export function ModalReserva({ abierto, onCerrar }: Props) {
       setError(err instanceof Error ? err.message : 'No pudimos registrar tu reserva. Inténtalo de nuevo.')
     } finally {
       setEnviando(false)
+      enviandoRef.current = false
     }
   }
 
@@ -295,6 +307,17 @@ export function ModalReserva({ abierto, onCerrar }: Props) {
                     </select>
                   </Campo>
                 </div>
+
+                {errorHorarios && horarios.length === 0 && (
+                  <div className="space-y-3">
+                    <p role="alert" className="text-sm text-red-800 dark:text-red-300">
+                      {errorHorarios}
+                    </p>
+                    <Button variant="ghost" type="button" onClick={recargarHorarios}>
+                      Reintentar
+                    </Button>
+                  </div>
+                )}
 
                 <Campo label="Notas (opcional)" error={errores.notes}>
                   <textarea

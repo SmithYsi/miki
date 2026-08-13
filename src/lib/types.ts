@@ -72,6 +72,16 @@ export interface EventJoin {
   spots_left: number | null
 }
 
+/** Respuesta de POST /api/events/:id/cancel. */
+export interface CancelResponse {
+  ok: true
+  spots_taken: number
+  spots_left: number | null
+}
+
+/** `event_id` lo agrega el cliente (el endpoint no lo devuelve). */
+export type EventCancel = CancelResponse & { event_id: number }
+
 /** Testimonio de GET /api/testimonios */
 export interface Testimonio {
   id: number
