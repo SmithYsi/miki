@@ -156,11 +156,15 @@ export function getMenu() {
 }
 
 export function getEvents(type?: EventType) {
+  // "hoy" en fecha local (CDMX), no date('now') que es UTC: entre 18:00 y 00:00 local
+  // UTC ya es "mañana" y los eventos de hoy desaparecerían del listado.
+  const ahora = new Date();
+  const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}-${String(ahora.getDate()).padStart(2, "0")}`;
   const sql = type
-    ? "SELECT id, title, description, date, time, type, price, capacity, spots_taken, image_url FROM events WHERE date >= date('now') AND type = ? ORDER BY date, time"
-    : "SELECT id, title, description, date, time, type, price, capacity, spots_taken, image_url FROM events WHERE date >= date('now') ORDER BY date, time";
+    ? "SELECT id, title, description, date, time, type, price, capacity, spots_taken, image_url FROM events WHERE date >= ? AND type = ? ORDER BY date, time"
+    : "SELECT id, title, description, date, time, type, price, capacity, spots_taken, image_url FROM events WHERE date >= ? ORDER BY date, time";
   const stmt = db.prepare(sql);
-  return type ? stmt.all(type) : stmt.all();
+  return type ? stmt.all(hoy, type) : stmt.all(hoy);
 }
 
 export function getTestimonios() {
@@ -225,18 +229,30 @@ export function deleteSession(token: string) {
 }
 
 export class JoinEventError extends Error {
-  code: "duplicado" | "lleno";
-  constructor(code: "duplicado" | "lleno") {
-    super(code === "duplicado" ? "Ya tienes un lugar apartado en este evento con ese correo." : "El evento está lleno.");
+  code: "duplicado" | "lleno" | "pasado";
+  constructor(code: "duplicado" | "lleno" | "pasado") {
+    const msg =
+      code === "duplicado"
+        ? "Ya tienes un lugar apartado en este evento con ese correo."
+        : code === "lleno"
+          ? "El evento está lleno."
+          : "Este evento ya terminó.";
+    super(msg);
     this.code = code;
   }
 }
 
 export function joinEvent(eventId: number, name: string, email: string) {
-  const evento = db.prepare("SELECT id, capacity, spots_taken FROM events WHERE id = ?").get(eventId) as
-    | { id: number; capacity: number | null; spots_taken: number }
+  const evento = db.prepare("SELECT id, date, time, capacity, spots_taken FROM events WHERE id = ?").get(eventId) as
+    | { id: number; date: string; time: string; capacity: number | null; spots_taken: number }
     | undefined;
   if (!evento) return null;
+
+  // Mismo cómputo de hoy/hora local que reservas.ts: un evento de hoy ya terminado no acepta inscripciones.
+  const ahora = new Date();
+  const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}-${String(ahora.getDate()).padStart(2, "0")}`;
+  const ahoraStr = `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
+  if (evento.date < hoy || (evento.date === hoy && evento.time <= ahoraStr)) throw new JoinEventError("pasado");
 
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -284,7 +300,16 @@ export function cancelJoinEvent(eventId: number, email: string) {
     }
     db.prepare("UPDATE events SET spots_taken = MAX(0, spots_taken - 1) WHERE id = ?").run(eventId);
     db.exec("COMMIT");
-    return { ok: true };
+    // Mismo shape que joinEvent: SELECT post-cambio para spots_taken y spots_left.
+    const final = db.prepare("SELECT capacity, spots_taken FROM events WHERE id = ?").get(eventId) as
+      | { capacity: number | null; spots_taken: number }
+      | undefined;
+    if (!final) return null;
+    return {
+      ok: true,
+      spots_taken: final.spots_taken,
+      spots_left: final.capacity === null ? null : final.capacity - final.spots_taken,
+    };
   } catch (err) {
     db.exec("ROLLBACK");
     throw err;

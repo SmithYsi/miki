@@ -82,3 +82,48 @@ test("evento con capacity null permite inscribirse y devuelve spots_left null", 
   assert.ok(r);
   assert.equal(r.spots_left, null);
 });
+
+test("inscripción a evento de hoy con hora pasada lanza error pasado; con fecha futura es aceptada", () => {
+  const ahora = new Date();
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const hoy = fmt(ahora);
+  const futura = fmt(new Date(ahora.getFullYear() + 1, ahora.getMonth(), ahora.getDate()));
+  const ins = db.prepare(
+    "INSERT INTO events (title, description, date, time, type, price, capacity, spots_taken, image_url) VALUES (?, ?, ?, ?, 'evento', 0, null, 0, '')"
+  );
+  // "00:00" siempre es <= a la hora actual local, así que el evento de hoy ya pasó sin importar la hora de corrida.
+  const idPasado = Number(ins.run("Test de hoy pasado", "hora ya pasó", hoy, "00:00").lastInsertRowid);
+  const idFuturo = Number(ins.run("Test de futuro", "año que viene", futura, "20:00").lastInsertRowid);
+  try {
+    const email = `join-pasado-${Date.now()}@test.com`;
+    assert.throws(
+      () => joinEvent(idPasado, "Ana Torres", email),
+      (e: unknown) => e instanceof JoinEventError && e.code === "pasado",
+    );
+    emailsCreados.push(email);
+    const r = joinEvent(idFuturo, "Ana Torres", email);
+    assert.ok(r, "evento futuro acepta inscripción");
+    assert.equal(r.event_id, idFuturo);
+  } finally {
+    db.prepare("DELETE FROM events WHERE id IN (?, ?)").run(idPasado, idFuturo);
+  }
+});
+
+test("getEvents filtra con hoy local: el evento de hoy aparece y el de ayer no", () => {
+  const ahora = new Date();
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const hoy = fmt(ahora);
+  const ayer = fmt(new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 1));
+  const ins = db.prepare(
+    "INSERT INTO events (title, description, date, time, type, price, capacity, spots_taken, image_url) VALUES (?, ?, ?, '20:00', 'evento', 0, null, 0, '')"
+  );
+  const idHoy = Number(ins.run("Test de hoy", "hoy", hoy).lastInsertRowid);
+  const idAyer = Number(ins.run("Test de ayer", "ayer", ayer).lastInsertRowid);
+  try {
+    const eventos = getEvents() as unknown as Array<{ id: number }>;
+    assert.ok(eventos.some((e) => e.id === idHoy), "el evento de hoy local aparece en getEvents()");
+    assert.ok(!eventos.some((e) => e.id === idAyer), "el evento de ayer no aparece");
+  } finally {
+    db.prepare("DELETE FROM events WHERE id IN (?, ?)").run(idHoy, idAyer);
+  }
+});

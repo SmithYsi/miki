@@ -35,13 +35,29 @@ test("cancelar inscripción la borra y decrementa spots_taken", () => {
     const email = `cancel-ok-${Date.now()}@test.com`;
     emailsCreados.push(email);
     assert.ok(joinEvent(evento.id, "Ana Torres", email));
-    assert.deepEqual(cancelJoinEvent(evento.id, email), { ok: true });
+    const r = cancelJoinEvent(evento.id, email);
+    assert.ok(r);
+    assert.equal(r.ok, true);
+    assert.equal(r.spots_taken, 0);
     const c = db
       .prepare("SELECT COUNT(*) c FROM event_inscripciones WHERE event_id = ? AND email = ?")
       .get(evento.id, email) as { c: number };
     assert.equal(c.c, 0);
     const spots = db.prepare("SELECT spots_taken FROM events WHERE id = ?").get(evento.id) as { spots_taken: number };
     assert.equal(spots.spots_taken, 0);
+  });
+});
+
+test("cancelar devuelve spots_taken decrementado y spots_left correcto", () => {
+  withCleanEvent((evento) => {
+    const email = `cancel-spots-${Date.now()}@test.com`;
+    emailsCreados.push(email);
+    assert.ok(joinEvent(evento.id, "Ana Torres", email));
+    const r = cancelJoinEvent(evento.id, email);
+    assert.ok(r);
+    // tras join: spots_taken = 1, spots_left = capacity - 1; tras cancelar: -1 y capacity - 0.
+    assert.equal(r.spots_taken, 0);
+    assert.equal(r.spots_left, evento.capacity === null ? null : evento.capacity);
   });
 });
 
