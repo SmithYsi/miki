@@ -22,6 +22,13 @@ test("verify falla con password incorrecto", () => {
   assert.equal(verifyPassword("mal-password", stored), false);
 });
 
+test("verify no lanza con hash corrupto (no hex / longitud inválida)", () => {
+  assert.equal(verifyPassword("secreto-123", "sal:zzzz"), false); // no hex
+  assert.equal(verifyPassword("secreto-123", "sal:abc123"), false); // hex de longitud inválida
+  assert.equal(verifyPassword("secreto-123", "sal:" + "z".repeat(128)), false); // 128 chars no hex
+  assert.equal(verifyPassword("secreto-123", "sin-hash"), false); // sin separador
+});
+
 test("hash produce valores únicos (salt aleatorio)", () => {
   assert.notEqual(hashPassword("secreto-123"), hashPassword("secreto-123"));
 });

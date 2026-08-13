@@ -28,7 +28,8 @@ export function hashPassword(password: string): string {
 
 export function verifyPassword(password: string, stored: string): boolean {
   const [salt, hash] = stored.split(":");
-  if (!salt || !hash) return false;
+  // ponytail: hash corrupto (no hex de 64 bytes) → false, sin que scryptSync lance.
+  if (!salt || !hash || !/^[0-9a-f]{128}$/i.test(hash)) return false;
   const expected = Buffer.from(hash, "hex");
   const actual = scryptSync(password, salt, expected.length);
   return timingSafeEqual(expected, actual);

@@ -78,6 +78,12 @@ function limitLoginAccount(req: express.Request, res: express.Response, next: ex
       loginFails.set(email, fails);
     }
   });
+  // ponytail: evicción perezosa de cuentas inactivas (mismo patrón que makeRateLimit).
+  if (loginFails.size > 1000) {
+    for (const [k, v] of loginFails) {
+      if (v.length === 0 || now - v[v.length - 1] >= windowMs) loginFails.delete(k);
+    }
+  }
   next();
 }
 
@@ -109,7 +115,7 @@ app.post("/api/reservas", limitReservas, (req, res) => {  const parsed = reserva
   if (error) return res.status(400).json({ error });
 
   try {
-    const reserva = insertReserva(parsed.data);
+    const reserva = insertReserva({ ...parsed.data, email: parsed.data.email.trim().toLowerCase() });
     res.status(201).json(reserva);
   } catch (err) {
     if (err instanceof DuplicateReservaError) return res.status(409).json({ error: err.message });

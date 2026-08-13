@@ -54,3 +54,30 @@ test("regla: fecha pasada es rechazada", () => {
   const error = validarReglasReserva({ ...valido, date: "2020-01-01" }, horarios);
   assert.ok(error);
 });
+
+const DIAS_HOY = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+function hoyStr() {
+  const h = new Date();
+  return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}-${String(h.getDate()).padStart(2, "0")}`;
+}
+
+test("regla: hoy con hora pasada o igual a ahora es rechazada", () => {
+  const h = new Date();
+  const ahoraStr = `${String(h.getHours()).padStart(2, "0")}:${String(h.getMinutes()).padStart(2, "0")}`;
+  const horariosHoy = [{ day: DIAS_HOY[h.getDay()], open: "00:00", close: "23:59", closed: false }];
+
+  assert.ok(validarReglasReserva({ ...valido, date: hoyStr(), time: "00:00" }, horariosHoy), "hora pasada debe rechazarse");
+  assert.ok(validarReglasReserva({ ...valido, date: hoyStr(), time: ahoraStr }, horariosHoy), "la hora actual debe rechazarse");
+});
+
+test("regla: hoy con hora futura es aceptada", () => {
+  const h = new Date();
+  const fut = new Date(h.getTime() + 60_000);
+  // ponytail: si son las 23:59 el minuto siguiente ya es mañana; no hay hora futura hoy que probar.
+  if (hoyStr() !== `${fut.getFullYear()}-${String(fut.getMonth() + 1).padStart(2, "0")}-${String(fut.getDate()).padStart(2, "0")}`) return;
+  const futStr = `${String(fut.getHours()).padStart(2, "0")}:${String(fut.getMinutes()).padStart(2, "0")}`;
+  const horariosHoy = [{ day: DIAS_HOY[h.getDay()], open: "00:00", close: "23:59", closed: false }];
+
+  assert.equal(validarReglasReserva({ ...valido, date: hoyStr(), time: futStr }, horariosHoy), null);
+});

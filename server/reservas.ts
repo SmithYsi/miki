@@ -42,6 +42,11 @@ export function validarReglasReserva(data: ReservaValidada, horarios: Horario[])
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   if (date < todayStr) return "La fecha no puede estar en el pasado.";
 
+  if (date === todayStr) {
+    const nowStr = `${String(today.getHours()).padStart(2, "0")}:${String(today.getMinutes()).padStart(2, "0")}`;
+    if (time <= nowStr) return `Hoy solo aceptamos reservas después de las ${nowStr}.`;
+  }
+
   const dia = DIAS[new Date(`${date}T00:00:00`).getDay()];
   const horario = horarios.find((h) => h.day.toLowerCase() === dia);
   if (!horario || horario.closed) return "Estamos cerrados ese día. Elige otra fecha.";
