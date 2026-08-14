@@ -6,7 +6,6 @@ import { insertMensaje, subscribeNewsletter, db } from "./db.js";
 const emailsCreados: string[] = [];
 
 after(() => {
-  // ponytail: no ensuciar la DB de dev con mensajes de test
   for (const email of emailsCreados) {
     db.prepare("DELETE FROM mensajes WHERE email = ?").run(email);
     db.prepare("DELETE FROM newsletter WHERE email = ?").run(email);

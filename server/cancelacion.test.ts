@@ -12,12 +12,9 @@ interface TestEvent {
 const emailsCreados: string[] = [];
 
 after(() => {
-  // ponytail: no ensuciar la DB de dev con inscripciones de test
   for (const email of emailsCreados) db.prepare("DELETE FROM event_inscripciones WHERE email = ?").run(email);
 });
 
-// ponytail: la DB es persistente (server/data/miki.db); los tests resetean spots_taken
-// para ser deterministas sin importar cuántas corridas hubo antes.
 function withCleanEvent(fn: (e: TestEvent) => void) {
   const evs = getEvents() as unknown as TestEvent[];
   const evento = evs.find((e) => e.capacity === 12) ?? evs[evs.length - 1];

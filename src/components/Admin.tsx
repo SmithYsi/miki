@@ -77,7 +77,6 @@ export function Admin() {
       .then((r) =>
         setReservas({
           status: 'lista',
-          // ponytail: pocas reservas → todas, ordenadas por creación; paginación si crece.
           reservas: [...r].sort((a, b) => b.created_at.localeCompare(a.created_at)),
         }),
       )

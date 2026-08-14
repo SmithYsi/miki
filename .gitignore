@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 server/data/*.db
+docs/
 MEMORY.md
 
 # Editor directories and files

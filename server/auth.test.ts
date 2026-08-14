@@ -7,7 +7,6 @@ import { createUser, deleteSession, getSessionUser, getUserByEmail, db } from ".
 const emailsCreados: string[] = [];
 
 after(() => {
-  // ponytail: no ensuciar la DB de dev con usuarios de test
   for (const email of emailsCreados) db.prepare("DELETE FROM users WHERE email = ?").run(email);
 });
 

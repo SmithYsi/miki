@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getEvents } from '../lib/api'
-import type { EventCancel, EventItem, EventJoin, EventType } from '../lib/types'
+import type { EventItem, EventType } from '../lib/types'
 import { Button } from './Button'
 import { ModalInscripcion } from './ModalInscripcion'
 import { Reveal } from './Reveal'
@@ -49,17 +49,8 @@ export function Eventos() {
 
   useEffect(load, [load])
 
-  // Actualiza spots_taken del evento sin recargar toda la sección
-  const alInscrito = useCallback((r: EventJoin) => {
-    setState((s) =>
-      s.status === 'ready'
-        ? { ...s, events: s.events.map((e) => (e.id === r.event_id ? { ...e, spots_taken: r.spots_taken } : e)) }
-        : s,
-    )
-  }, [])
-
-  // Mismo path al cancelar: libera lugar, el card deja de mostrar "Lleno"
-  const alCancelado = useCallback((r: EventCancel) => {
+  // Actualiza spots_taken del evento (inscribirse o cancelar ocupa/libera lugar)
+  const alActualizarSpots = useCallback((r: { event_id: number; spots_taken: number }) => {
     setState((s) =>
       s.status === 'ready'
         ? { ...s, events: s.events.map((e) => (e.id === r.event_id ? { ...e, spots_taken: r.spots_taken } : e)) }
@@ -127,8 +118,8 @@ export function Eventos() {
       <ModalInscripcion
         evento={inscripcion}
         onCerrar={() => setInscripcion(null)}
-        onInscrito={alInscrito}
-        onCancelado={alCancelado}
+        onInscrito={alActualizarSpots}
+        onCancelado={alActualizarSpots}
       />
     </section>
   )
@@ -148,8 +139,6 @@ function EventCard({
   const hora = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`
   const terminado = evento.date === hoy && evento.time <= hora
   const lleno = evento.capacity !== null && evento.capacity - evento.spots_taken <= 0
-  // ponytail: capacity null = evento sin límite, no hay nada que apartar → sin botón.
-  // lleno → etiqueta "Lleno" en lugar del botón.
   const conCupo = evento.capacity !== null && !lleno
   return (
     <article

@@ -13,7 +13,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('framer-motion') || id.includes('gsap') || id.includes('lenis')) return 'motion'
+          if (id.includes('framer-motion') || id.includes('lenis')) return 'motion'
         },
       },
     },

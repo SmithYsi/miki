@@ -27,7 +27,6 @@ import { verifyPassword, createSession, hashPassword, requireAuth, requireAdmin 
 
 const app = express();
 
-// ponytail: hash dummy para igualar el timing del verify con emails inexistentes.
 const DUMMY_HASH = hashPassword(randomBytes(16).toString("hex"));
 
 const ORIGINS = (process.env.CORS_ORIGINS ?? "http://localhost:5173,http://localhost:4173")
@@ -37,8 +36,6 @@ const ORIGINS = (process.env.CORS_ORIGINS ?? "http://localhost:5173,http://local
 app.use(cors({ origin: ORIGINS.length ? ORIGINS : false }));
 app.use(express.json());
 
-// ponytail: rate limit por IP en memoria. Reemplazar por store compartido
-// (Redis) si el API se escala a varios procesos.
 function makeRateLimit(limit: number, windowMs: number, message: string) {
   const hits = new Map<string, number[]>();
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -48,7 +45,6 @@ function makeRateLimit(limit: number, windowMs: number, message: string) {
     if (recent.length >= limit) return res.status(429).json({ error: message });
     recent.push(now);
     hits.set(ip, recent);
-    // ponytail: evicción perezosa de IPs inactivas para no crecer sin límite.
     if (hits.size > 1000) {
       for (const [k, v] of hits) {
         if (v.length === 0 || now - v[v.length - 1] >= windowMs) hits.delete(k);
@@ -63,7 +59,6 @@ const limitInscripciones = makeRateLimit(10, 10 * 60 * 1000, "Demasiadas solicit
 const limitContacto = makeRateLimit(10, 10 * 60 * 1000, "Demasiados mensajes en poco tiempo. Inténtalo en unos minutos.");
 const limitLogin = makeRateLimit(5, 10 * 60 * 1000, "Demasiados intentos. Inténtalo en unos minutos.");
 
-// ponytail: backoff por cuenta (clave = email) contra fuerza bruta, además del límite por IP.
 const loginFails = new Map<string, number[]>();
 function limitLoginAccount(req: express.Request, res: express.Response, next: express.NextFunction) {
   const email = String((req.body as { email?: unknown })?.email ?? "").trim().toLowerCase();
@@ -78,7 +73,6 @@ function limitLoginAccount(req: express.Request, res: express.Response, next: ex
       loginFails.set(email, fails);
     }
   });
-  // ponytail: evicción perezosa de cuentas inactivas (mismo patrón que makeRateLimit).
   if (loginFails.size > 1000) {
     for (const [k, v] of loginFails) {
       if (v.length === 0 || now - v[v.length - 1] >= windowMs) loginFails.delete(k);
@@ -160,7 +154,6 @@ app.post("/api/events/:id/cancel", limitInscripciones, (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(404).json({ error: "No encontramos una inscripción con ese correo." });
 
-  // ponytail: email normalizado a minúsculas para que cancelar coincida con el join (case-insensitive).
   const resultado = cancelJoinEvent(id, parsed.data.email.trim().toLowerCase());
   if (!resultado) return res.status(404).json({ error: "No encontramos una inscripción con ese correo." });
   res.json(resultado);
@@ -199,7 +192,6 @@ app.post("/api/auth/login", limitLogin, limitLoginAccount, (req, res) => {
   }
   const email = parsed.data.email.trim().toLowerCase();
   const user = getUserByEmail(email);
-  // ponytail: verify contra hash dummy para no filtrar emails por timing (scrypt es lento).
   const stored = user ? user.password_hash : DUMMY_HASH;
   const ok = verifyPassword(parsed.data.password, stored);
   if (!user || !ok) {
