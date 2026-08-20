@@ -17,6 +17,11 @@ export interface MenuItem {
   image_url: string | null
   available: boolean
   sort_order: number
+  intensidad: number | null
+  dulzura: number | null
+  con_leche: boolean | null
+  temperatura: 'frio' | 'caliente' | null
+  tipo: 'cafe' | 'sin-cafe' | 'otro'
 }
 
 export interface Menu {
@@ -37,6 +42,7 @@ export interface EventItem {
   capacity: number | null
   spots_taken: number
   image_url: string | null
+  tags: string[]
 }
 
 export interface Horario {
@@ -113,4 +119,16 @@ export interface ReservaAdmin {
   notes: string | null
   status: ReservaStatus
   created_at: string
+}
+
+// --- Asistente IA ---
+
+export interface AsistenteInput {
+  conversationId?: string
+  message: string
+}
+
+export interface AsistenteResponse {
+  conversationId: string
+  reply: string
 }

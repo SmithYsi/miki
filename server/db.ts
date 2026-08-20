@@ -27,7 +27,12 @@ CREATE TABLE IF NOT EXISTS items (
   tags TEXT NOT NULL DEFAULT '[]',
   image_url TEXT NOT NULL DEFAULT '',
   available INTEGER NOT NULL DEFAULT 1,
-  sort_order INTEGER NOT NULL DEFAULT 0
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  intensidad INTEGER,
+  dulzura INTEGER,
+  con_leche INTEGER,
+  temperatura TEXT,
+  tipo TEXT NOT NULL DEFAULT 'otro'
 );
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,7 +44,8 @@ CREATE TABLE IF NOT EXISTS events (
   price INTEGER,
   capacity INTEGER,
   spots_taken INTEGER NOT NULL DEFAULT 0,
-  image_url TEXT NOT NULL DEFAULT ''
+  image_url TEXT NOT NULL DEFAULT '',
+  tags TEXT NOT NULL DEFAULT '[]'
 );
 CREATE TABLE IF NOT EXISTS reservas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,27 +110,61 @@ CREATE INDEX IF NOT EXISTS idx_inscripciones_event ON event_inscripciones(event_
 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
 `);
 
+// Migración incremental: agregar columnas nuevas si no existen (DB existente)
+// ponytail: nombres hardcodeados, nunca pasar input de usuario
+function migrateTable(table: string, columns: { name: string; type: string; def?: string }[]) {
+  const existing = new Set(
+    (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((r) => r.name),
+  );
+  for (const col of columns) {
+    if (!existing.has(col.name)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${col.name} ${col.type}${col.def ? ` DEFAULT ${col.def}` : ''}`);
+    }
+  }
+}
+
+migrateTable("items", [
+  { name: "intensidad", type: "INTEGER" },
+  { name: "dulzura", type: "INTEGER" },
+  { name: "con_leche", type: "INTEGER" },
+  { name: "temperatura", type: "TEXT" },
+  { name: "tipo", type: "TEXT NOT NULL", def: "'otro'" },
+]);
+migrateTable("events", [
+  { name: "tags", type: "TEXT NOT NULL", def: "'[]'" },
+]);
+
 const count = (table: string) => (db.prepare(`SELECT COUNT(*) c FROM ${table}`).get() as { c: number }).c;
 
 if (count("categories") === 0) {
   const insCat = db.prepare("INSERT INTO categories (name, description, sort_order) VALUES (?, ?, ?)");
   const insItem = db.prepare(
-    "INSERT INTO items (category_id, name, description, price, tags, image_url, available, sort_order) VALUES (?, ?, ?, ?, '[]', ?, 1, ?)"
+    "INSERT INTO items (category_id, name, description, price, tags, image_url, available, sort_order, intensidad, dulzura, con_leche, temperatura, tipo) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)"
   );
   const insEvent = db.prepare(
-    "INSERT INTO events (title, description, date, time, type, price, capacity, spots_taken, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO events (title, description, date, time, type, price, capacity, spots_taken, image_url, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   );
   const insHorario = db.prepare("INSERT INTO horarios (day, open, close, closed) VALUES (?, ?, ?, ?)");
 
   seed.categories.forEach((cat, ci) => {
     insCat.run(cat.name, cat.description, ci + 1);
     cat.items.forEach((item, ii) => {
-      insItem.run(ci + 1, item.name, item.description, item.price, "", ii + 1);
+      insItem.run(
+        ci + 1, item.name, item.description, item.price,
+        JSON.stringify(item.tags ?? []), item.image_url ?? "", ii + 1,
+        item.intensidad ?? null, item.dulzura ?? null,
+        item.con_leche === true ? 1 : item.con_leche === false ? 0 : null,
+        item.temperatura ?? null, item.tipo ?? "otro",
+      );
     });
   });
 
   seed.events.forEach((e) => {
-    insEvent.run(e.title, e.description, e.date, e.time, e.type, e.price, e.capacity, e.spots_taken, e.image);
+    insEvent.run(
+      e.title, e.description, e.date, e.time, e.type,
+      e.price, e.capacity, e.spots_taken, e.image,
+      JSON.stringify(e.tags ?? []),
+    );
   });
 
   seed.horarios.forEach((h) => insHorario.run(h.day, h.open, h.close, h.closed ? 1 : 0));
@@ -148,9 +188,14 @@ if (count("users") === 0) {
 export function getMenu() {
   const categories = db.prepare("SELECT id, name, description, sort_order FROM categories ORDER BY sort_order").all();
   const items = db
-    .prepare("SELECT id, category_id, name, description, price, tags, image_url, available, sort_order FROM items ORDER BY category_id, sort_order")
+    .prepare("SELECT id, category_id, name, description, price, tags, image_url, available, sort_order, intensidad, dulzura, con_leche, temperatura, tipo FROM items ORDER BY category_id, sort_order")
     .all()
-    .map((r: any) => ({ ...r, tags: JSON.parse(r.tags), available: !!r.available }));
+    .map((r: any) => ({
+      ...r,
+      tags: JSON.parse(r.tags),
+      available: !!r.available,
+      con_leche: r.con_leche === null ? null : !!r.con_leche,
+    }));
   return { categories, items };
 }
 
@@ -159,11 +204,11 @@ export function getEvents(type?: EventType) {
   // UTC ya es "mañana" y los eventos de hoy desaparecerían del listado.
   const ahora = new Date();
   const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}-${String(ahora.getDate()).padStart(2, "0")}`;
-  const sql = type
-    ? "SELECT id, title, description, date, time, type, price, capacity, spots_taken, image_url FROM events WHERE date >= ? AND type = ? ORDER BY date, time"
-    : "SELECT id, title, description, date, time, type, price, capacity, spots_taken, image_url FROM events WHERE date >= ? ORDER BY date, time";
+  const base = "SELECT id, title, description, date, time, type, price, capacity, spots_taken, image_url, tags FROM events WHERE date >= ?";
+  const sql = type ? `${base} AND type = ? ORDER BY date, time` : `${base} ORDER BY date, time`;
   const stmt = db.prepare(sql);
-  return type ? stmt.all(hoy, type) : stmt.all(hoy);
+  const rows = (type ? stmt.all(hoy, type) : stmt.all(hoy)) as any[];
+  return rows.map((r) => ({ ...r, tags: JSON.parse(r.tags) }));
 }
 
 export function getTestimonios() {

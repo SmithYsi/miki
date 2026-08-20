@@ -24,6 +24,7 @@ import {
 } from "./db.js";
 import { reservaSchema, validarReglasReserva } from "./reservas.js";
 import { verifyPassword, createSession, hashPassword, requireAuth, requireAdmin } from "./auth.js";
+import { procesarMensaje } from "./asistente.js";
 
 const app = express();
 
@@ -34,7 +35,7 @@ const ORIGINS = (process.env.CORS_ORIGINS ?? "http://localhost:5173,http://local
   .map((o) => o.trim())
   .filter(Boolean);
 app.use(cors({ origin: ORIGINS.length ? ORIGINS : false }));
-app.use(express.json());
+app.use(express.json({ limit: "50kb" }));
 
 function makeRateLimit(limit: number, windowMs: number, message: string) {
   const hits = new Map<string, number[]>();
@@ -58,6 +59,7 @@ const limitReservas = makeRateLimit(10, 10 * 60 * 1000, "Demasiadas reservas en 
 const limitInscripciones = makeRateLimit(10, 10 * 60 * 1000, "Demasiadas solicitudes en poco tiempo. Inténtalo en unos minutos.");
 const limitContacto = makeRateLimit(10, 10 * 60 * 1000, "Demasiados mensajes en poco tiempo. Inténtalo en unos minutos.");
 const limitLogin = makeRateLimit(5, 10 * 60 * 1000, "Demasiados intentos. Inténtalo en unos minutos.");
+const limitAsistente = makeRateLimit(20, 10 * 60 * 1000, "Demasiadas consultas. Inténtalo en unos minutos.");
 
 const loginFails = new Map<string, number[]>();
 function limitLoginAccount(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -234,6 +236,28 @@ app.patch("/api/admin/reservas/:id", requireAuth, requireAdmin, (req, res) => {
   const actualizada = Number.isInteger(id) && id > 0 ? setReservaStatus(id, parsed.data.status) : null;
   if (!actualizada) return res.status(404).json({ error: "Reserva no encontrada." });
   res.json(actualizada);
+});
+
+// --- Asistente IA ---
+
+const asistenteSchema = z.object({
+  conversationId: z.string().regex(/^[0-9a-f]{32}$/).optional(),
+  message: z.string().trim().min(1, "El mensaje no puede estar vacío.").max(500, "El mensaje es demasiado largo."),
+});
+
+app.post("/api/asistente", limitAsistente, async (req, res) => {
+  const parsed = asistenteSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "Datos inválidos.";
+    return res.status(400).json({ error: msg });
+  }
+  try {
+    const resultado = await procesarMensaje(parsed.data);
+    res.json(resultado);
+  } catch (err) {
+    console.error("Error en asistente:", err instanceof Error ? err.message : err);
+    res.status(500).json({ error: "Error interno del asistente." });
+  }
 });
 
 // En producción (dist/ presente), sirve el build del frontend y hace fallback SPA

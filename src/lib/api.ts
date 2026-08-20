@@ -1,4 +1,6 @@
 import type {
+  AsistenteInput,
+  AsistenteResponse,
   CancelResponse,
   EventItem,
   EventJoin,
@@ -113,3 +115,11 @@ export const actualizarStatusReserva = (id: number, status: ReservaStatus) =>
     },
     true,
   )
+
+/** Enviar mensaje al asistente IA. */
+export const enviarAsistente = (data: AsistenteInput) =>
+  request<AsistenteResponse>('/api/asistente', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })

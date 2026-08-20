@@ -15,6 +15,7 @@ import { Navbar } from './components/Navbar'
 import { Origenes } from './components/Origenes'
 import { Taza } from './components/Taza'
 import { Testimonios } from './components/Testimonios'
+import { Asistente } from './components/Asistente'
 
 function App() {
   const [reservaAbierta, setReservaAbierta] = useState(false)
@@ -41,6 +42,7 @@ function App() {
       </main>
       <Footer onReservar={() => setReservaAbierta(true)} />
       <ModalReserva key={reservaAbierta ? 'abierta' : 'cerrada'} abierto={reservaAbierta} onCerrar={cerrarReserva} />
+      <Asistente />
     </LazyMotion>
   )
 }
