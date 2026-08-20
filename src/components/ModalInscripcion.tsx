@@ -308,9 +308,9 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito, onCancelado }: 
   )
 }
 
-function Campo({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Campo({ label, error, children, id }: { label: string; error?: string; children: React.ReactNode; id?: string }) {
   return (
-    <label className="block">
+    <label htmlFor={id} className="block">
       <span className="text-sm font-medium">{label}</span>
       <span className="mt-2 block">{children}</span>
       {error && (

@@ -26,6 +26,8 @@ const FILTROS: { key: ReservaStatus | 'todas'; label: string }[] = [
   { key: 'cancelada', label: 'Canceladas' },
 ]
 
+const volverAlSitio = () => { window.location.hash = '' }
+
 const loginSchema = z.object({
   email: z.email('Escribe un correo válido'),
   password: z.string().min(1, 'Escribe tu contraseña'),
@@ -120,10 +122,6 @@ export function Admin() {
     }
     setToken(null)
     setAuth({ status: 'anonimo' })
-  }
-
-  const volverAlSitio = () => {
-    window.location.hash = ''
   }
 
   return (

@@ -90,8 +90,9 @@ export function FormularioContacto() {
             Dudas, pedidos especiales o solo saludar. Respondemos en menos de 24 h.
           </p>
           <div className="mt-6 space-y-5">
-            <Campo label="Nombre" error={errores.nombre}>
+            <Campo label="Nombre" error={errores.nombre} id="contacto-nombre">
               <input
+                id="contacto-nombre"
                 type="text"
                 autoComplete="name"
                 value={valores.nombre}
@@ -100,8 +101,9 @@ export function FormularioContacto() {
                 placeholder="Tu nombre"
               />
             </Campo>
-            <Campo label="Correo" error={errores.email}>
+            <Campo label="Correo" error={errores.email} id="contacto-email">
               <input
+                id="contacto-email"
                 type="email"
                 autoComplete="email"
                 value={valores.email}
@@ -110,8 +112,9 @@ export function FormularioContacto() {
                 placeholder="tucorreo@ejemplo.mx"
               />
             </Campo>
-            <Campo label="Mensaje (opcional)" error={errores.mensaje}>
+            <Campo label="Mensaje (opcional)" error={errores.mensaje} id="contacto-mensaje">
               <textarea
+                id="contacto-mensaje"
                 rows={4}
                 value={valores.mensaje}
                 onChange={set('mensaje')}
@@ -146,9 +149,9 @@ export function FormularioContacto() {
   )
 }
 
-function Campo({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Campo({ label, error, children, id }: { label: string; error?: string; children: React.ReactNode; id?: string }) {
   return (
-    <label className="block">
+    <label htmlFor={id} className="block">
       <span className="text-sm font-medium text-espresso">{label}</span>
       <span className="mt-2 block">{children}</span>
       {error && (

@@ -90,9 +90,10 @@ export function Contacto({ onReservar }: { onReservar: () => void }) {
           <div className="relative flex h-full min-h-[320px] flex-col lg:h-[520px]">
             <iframe
               src={MAPA_URL}
-              title="Mapa de ubicación de Café Miki en la Colonia Roma Norte, Ciudad de México"
-              aria-label="Mapa de ubicación de Café Miki"
+              title="Mapa de ubicacion de Cafe Miki en la Colonia Roma Norte, Ciudad de Mexico"
+              aria-label="Mapa de ubicacion de Cafe Miki"
               loading="lazy"
+              sandbox="allow-scripts allow-same-origin allow-popups"
               referrerPolicy="no-referrer-when-downgrade"
               allowFullScreen
               className="h-[320px] w-full flex-1 border-0 lg:h-full"
