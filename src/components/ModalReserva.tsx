@@ -85,14 +85,6 @@ export function ModalReserva({ abierto, onCerrar }: Props) {
     ).filter((el) => !el.hasAttribute('disabled'))
   }
 
-  const prevAbierto = useRef(false)
-
-  // Reset del estado solo al abrir (no al confirmar)
-  useEffect(() => {
-    if (abierto && !prevAbierto.current) reiniciar()
-    prevAbierto.current = abierto
-  }, [abierto])
-
   // Enfoque inicial, Escape, trampa de foco, bloqueo de scroll
   useEffect(() => {
     if (!abierto) return

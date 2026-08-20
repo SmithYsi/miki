@@ -37,6 +37,8 @@ export function Eventos() {
   const [state, setState] = useState<State>({ status: 'loading' })
   const [filtro, setFiltro] = useState<EventType | 'todos'>('todos')
   const [inscripcion, setInscripcion] = useState<EventItem | null>(null)
+  const cerrarInscripcion = useCallback(() => setInscripcion(null), [])
+  const cerrarInscripcion = useCallback(() => setInscripcion(null), [])
 
   const load = useCallback(() => {
     setState({ status: 'loading' })
@@ -116,8 +118,9 @@ export function Eventos() {
         )}
       </div>
       <ModalInscripcion
+        key={inscripcion?.id ?? 'cerrado'}
         evento={inscripcion}
-        onCerrar={() => setInscripcion(null)}
+        onCerrar={cerrarInscripcion}
         onInscrito={alActualizarSpots}
         onCancelado={alActualizarSpots}
       />

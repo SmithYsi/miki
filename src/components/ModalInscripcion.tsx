@@ -54,22 +54,6 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito, onCancelado }: 
     ).filter((el) => !el.hasAttribute('disabled'))
   }
 
-  const prevAbierto = useRef(false)
-
-  // Reset del estado solo al abrir
-  useEffect(() => {
-    if (abierto && !prevAbierto.current) {
-      setValores({ name: '', email: '' })
-      setErrores({})
-      setError(null)
-      setConfirmado(null)
-      setVista('unirse')
-      setEmailCancelar('')
-      setCancelada(false)
-    }
-    prevAbierto.current = abierto
-  }, [abierto])
-
   // Enfoque inicial, Escape, trampa de foco, bloqueo de scroll
   useEffect(() => {
     if (!abierto) return

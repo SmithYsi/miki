@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { LazyMotion, domAnimation } from 'framer-motion'
 import { useHash } from './lib/useHash'
 import { Admin } from './components/Admin'
@@ -18,6 +18,7 @@ import { Testimonios } from './components/Testimonios'
 
 function App() {
   const [reservaAbierta, setReservaAbierta] = useState(false)
+  const cerrarReserva = useCallback(() => setReservaAbierta(false), [])
   const hash = useHash()
 
   // Vista admin completa (sin Navbar/Footer del landing)
@@ -39,7 +40,7 @@ function App() {
         <Contacto onReservar={() => setReservaAbierta(true)} />
       </main>
       <Footer onReservar={() => setReservaAbierta(true)} />
-      <ModalReserva abierto={reservaAbierta} onCerrar={() => setReservaAbierta(false)} />
+      <ModalReserva key={reservaAbierta ? 'abierta' : 'cerrada'} abierto={reservaAbierta} onCerrar={cerrarReserva} />
     </LazyMotion>
   )
 }
