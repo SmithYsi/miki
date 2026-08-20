@@ -1,5 +1,4 @@
-import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll } from 'framer-motion'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from './Button'
 
 const LINKS = [
@@ -12,10 +11,12 @@ const LINKS = [
 export function Navbar({ onReservar }: { onReservar: () => void }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
-  const reduce = useReducedMotion()
-  const { scrollY } = useScroll()
 
-  useMotionValueEvent(scrollY, 'change', (v) => setScrolled(v > 24))
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const close = () => setOpen(false)
 
@@ -85,37 +86,30 @@ export function Navbar({ onReservar }: { onReservar: () => void }) {
         </button>
       </nav>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            id="menu-movil"
-            initial={reduce ? false : { height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="overflow-hidden border-t border-espresso/10 bg-cream lg:hidden"
-          >
-            <ul className="flex flex-col px-5 py-4">
-              {LINKS.map((link) => (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    onClick={close}
-                    className="block border-b border-espresso/5 py-3 text-base text-espresso"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-              <li className="pt-4">
-                <Button className="w-full" onClick={() => { close(); onReservar() }}>
-                  Reservar mesa
-                </Button>
-              </li>
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div
+        id="menu-movil"
+        className="grid transition-[grid-template-rows] duration-200 ease-out lg:hidden"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <ul className="flex flex-col overflow-hidden px-5">
+          {LINKS.map((link) => (
+            <li key={link.href}>
+              <a
+                href={link.href}
+                onClick={close}
+                className="block border-b border-espresso/5 py-3 text-base text-espresso"
+              >
+                {link.label}
+              </a>
+            </li>
+          ))}
+          <li className="pt-4">
+            <Button className="w-full" onClick={() => { close(); onReservar() }}>
+              Reservar mesa
+            </Button>
+          </li>
+        </ul>
+      </div>
     </header>
   )
 }
