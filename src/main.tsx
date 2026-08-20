@@ -13,11 +13,13 @@ document.addEventListener('click', (e) => {
   if (a) {
     const href = a.getAttribute('href')!
     if (!href || href === '#') return
-    const el = document.querySelector(href)
-    if (el) {
-      e.preventDefault()
-      scrollTo(href)
-    }
+    try {
+      const el = document.querySelector(href)
+      if (el) {
+        e.preventDefault()
+        scrollTo(href)
+      }
+    } catch { /* href inválido, ignorar */ }
   }
 })
 
