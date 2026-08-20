@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import seed, { type EventType } from "./seed-data.js";
-import { hashPassword } from "./auth.js";
+import { hashPassword } from "./crypto.js";
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), "data");
 mkdirSync(dataDir, { recursive: true });

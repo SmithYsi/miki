@@ -1,6 +1,7 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { insertSession, getSessionUser } from "./db.js";
+export { hashPassword } from "./crypto.js";
 
 export interface AuthUser {
   id: number;
@@ -18,13 +19,6 @@ declare global {
 }
 
 const SESSION_DAYS = 7;
-
-/** Hash "salt:hash" con scrypt (64 bytes), sin dependencias externas. */
-export function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString("hex");
-  const hash = scryptSync(password, salt, 64).toString("hex");
-  return `${salt}:${hash}`;
-}
 
 export function verifyPassword(password: string, stored: string): boolean {
   const [salt, hash] = stored.split(":");
