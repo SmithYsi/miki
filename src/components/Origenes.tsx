@@ -1,4 +1,4 @@
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
+import { m, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { IMAGES } from '../lib/images'
 import { Button } from './Button'
@@ -123,9 +123,9 @@ export function Origenes({ onReservar }: { onReservar: () => void }) {
                   Tres estados, <em className="italic text-accent-soft">una taza</em>
                 </h2>
               </div>
-              <motion.ul ref={track} style={{ x }} className="mt-12 flex w-max gap-6 px-5 md:px-8">
+              <m.ul ref={track} style={{ x }} className="mt-12 flex w-max gap-6 px-5 md:px-8">
                 {tarjetas('scroll')}
-              </motion.ul>
+              </m.ul>
             </div>
           </div>
         </div>

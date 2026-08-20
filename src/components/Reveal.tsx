@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from 'framer-motion'
+import { m, useReducedMotion } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { EASE, viewportOnce } from '../lib/motion'
 
@@ -16,7 +16,7 @@ const OFFSET = { up: { y: 28 }, left: { x: -40 }, right: { x: 40 } }
 export function Reveal({ children, className, delay = 0, from = 'up' }: Props) {
   const reduce = useReducedMotion()
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={reduce ? false : { opacity: 0, ...OFFSET[from] }}
       whileInView={reduce ? undefined : { opacity: 1, x: 0, y: 0 }}
@@ -24,6 +24,6 @@ export function Reveal({ children, className, delay = 0, from = 'up' }: Props) {
       transition={reduce ? undefined : { duration: 0.7, ease: EASE, delay }}
     >
       {children}
-    </motion.div>
+    </m.div>
   )
 }

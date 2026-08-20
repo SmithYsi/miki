@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from 'framer-motion'
+import { m, useReducedMotion } from 'framer-motion'
 import { Reveal } from './Reveal'
 
 export function Taza() {
@@ -46,7 +46,7 @@ function CupAnimated({ reduce }: { reduce: boolean | null }) {
       {/* humo */}
       <g>
         {[0, 1, 2].map((i) => (
-          <motion.path
+          <m.path
             key={i}
             d={`M${78 + i * 22} 108 C ${66 + i * 22} 84, ${94 + i * 22} 66, ${80 + i * 22} 40`}
             stroke="#e08a55"

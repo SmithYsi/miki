@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { cancelarInscripcion, inscribirseEvento } from '../lib/api'
@@ -164,7 +164,7 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito, onCancelado }: 
     <AnimatePresence>
       {abierto && evento && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <motion.div
+          <m.div
             aria-hidden="true"
             className="absolute inset-0 bg-espresso/60 dark:bg-black/70"
             initial={reduce ? false : { opacity: 0 }}
@@ -172,7 +172,7 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito, onCancelado }: 
             exit={{ opacity: 0 }}
             onClick={onCerrar}
           />
-          <motion.div
+          <m.div
             ref={dialogo}
             role="dialog"
             aria-modal="true"
@@ -317,7 +317,7 @@ export function ModalInscripcion({ evento, onCerrar, onInscrito, onCancelado }: 
                 )}
               </div>
             )}
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>

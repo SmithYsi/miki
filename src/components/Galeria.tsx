@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
 import { useCallback, useEffect, useState } from 'react'
 import { Reveal } from './Reveal'
 import { IMAGES } from '../lib/images'
@@ -70,7 +70,7 @@ export function Galeria() {
 
       <AnimatePresence>
         {abierta !== null && (
-          <motion.div
+          <m.div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -80,7 +80,7 @@ export function Galeria() {
             aria-modal="true"
             aria-label={FOTOS[abierta].alt}
           >
-            <motion.figure
+            <m.figure
               initial={reduce ? false : { scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
@@ -95,7 +95,7 @@ export function Galeria() {
               <figcaption className="mt-3 text-center text-xs uppercase tracking-[0.16em] text-bone/80">
                 {FOTOS[abierta].caption}
               </figcaption>
-            </motion.figure>
+            </m.figure>
             <button
               type="button"
               onClick={cerrar}
@@ -104,7 +104,7 @@ export function Galeria() {
             >
               ×
             </button>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </section>

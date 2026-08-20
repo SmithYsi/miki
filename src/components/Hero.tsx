@@ -1,4 +1,4 @@
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
+import { m, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
 import { EASE } from '../lib/motion'
 import { scrollTo } from '../lib/lenis'
@@ -22,7 +22,7 @@ export function Hero({ onReservar }: { onReservar: () => void }) {
 
   return (
     <section ref={ref} id="inicio" className="relative flex min-h-[100dvh] items-center overflow-hidden bg-espresso">
-      <motion.div
+      <m.div
         aria-hidden="true"
         style={{ y: bgY, scale: 1.1 }}
         className="absolute inset-0"
@@ -30,7 +30,7 @@ export function Hero({ onReservar }: { onReservar: () => void }) {
         aria-label="Interior cálido de Café Miki"
       >
         {/* Ken burns lento; colapsa a estático con prefers-reduced-motion */}
-        <motion.div
+        <m.div
           className="h-full w-full"
           style={{ backgroundImage: `url(${FONDO})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
           initial={reduce ? false : { scale: 1.02 }}
@@ -38,35 +38,35 @@ export function Hero({ onReservar }: { onReservar: () => void }) {
           transition={{ duration: 20, ease: 'linear' }}
         />
         <div className="absolute inset-0 bg-espresso/70" />
-      </motion.div>
+      </m.div>
 
-      <motion.div
+      <m.div
         style={{ y: contenidoY, opacity: fade }}
         className="relative z-10 mx-auto w-full max-w-3xl px-5 py-28 text-center md:px-8"
       >
-        <motion.p
+        <m.p
           {...up(0)}
           className="text-xs font-medium uppercase tracking-[0.3em] text-cream/70"
         >
           Café de especialidad · tueste propio
-        </motion.p>
-        <motion.h1
+        </m.p>
+        <m.h1
           {...up(0.1)}
           className="mt-6 font-display text-5xl font-medium leading-[1.05] tracking-tight text-cream md:text-7xl"
         >
           El café que se toma <em className="italic text-accent-soft">despacio</em>
-        </motion.h1>
-        <motion.p {...up(0.2)} className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-cream/80">
+        </m.h1>
+        <m.p {...up(0.2)} className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-cream/80">
           Granos de origen, métodos de filtrado y una sala donde el tiempo se sirve por tazas.
           Te esperamos en el centro.
-        </motion.p>
-        <motion.div {...up(0.3)} className="mt-10 flex flex-wrap justify-center gap-3">
+        </m.p>
+        <m.div {...up(0.3)} className="mt-10 flex flex-wrap justify-center gap-3">
           <Button tone="dark" onClick={onReservar}>Reservar mesa</Button>
           <Button tone="dark" variant="ghost" onClick={() => scrollTo('#carta')}>
             Ver la carta
           </Button>
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     </section>
   )
 }

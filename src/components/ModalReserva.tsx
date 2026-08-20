@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { crearReserva } from '../lib/api'
@@ -180,7 +180,7 @@ export function ModalReserva({ abierto, onCerrar }: Props) {
     <AnimatePresence>
       {abierto && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <motion.div
+          <m.div
             aria-hidden="true"
             className="absolute inset-0 bg-espresso/60 dark:bg-black/70"
             initial={reduce ? false : { opacity: 0 }}
@@ -188,7 +188,7 @@ export function ModalReserva({ abierto, onCerrar }: Props) {
             exit={{ opacity: 0 }}
             onClick={onCerrar}
           />
-          <motion.div
+          <m.div
             ref={dialogo}
             role="dialog"
             aria-modal="true"
@@ -343,7 +343,7 @@ export function ModalReserva({ abierto, onCerrar }: Props) {
                 </p>
               </form>
             )}
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>

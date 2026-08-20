@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { LazyMotion, domAnimation } from 'framer-motion'
 import { useHash } from './lib/useHash'
 import { Admin } from './components/Admin'
 import { Carta } from './components/Carta'
@@ -23,7 +24,7 @@ function App() {
   if (hash === '#/admin') return <Admin />
 
   return (
-    <>
+    <LazyMotion features={domAnimation}>
       <Navbar onReservar={() => setReservaAbierta(true)} />
       <main>
         <Hero onReservar={() => setReservaAbierta(true)} />
@@ -39,7 +40,7 @@ function App() {
       </main>
       <Footer onReservar={() => setReservaAbierta(true)} />
       <ModalReserva abierto={reservaAbierta} onCerrar={() => setReservaAbierta(false)} />
-    </>
+    </LazyMotion>
   )
 }
 
