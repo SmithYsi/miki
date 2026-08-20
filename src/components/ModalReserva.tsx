@@ -134,13 +134,6 @@ export function ModalReserva({ abierto, onCerrar }: Props) {
     setErrores((er) => ({ ...er, [campo]: undefined }))
   }
 
-  const reiniciar = () => {
-    setValores(INICIAL)
-    setErrores({})
-    setError(null)
-    setConfirmada(null)
-  }
-
   const alEnviar = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)

@@ -38,7 +38,6 @@ export function Eventos() {
   const [filtro, setFiltro] = useState<EventType | 'todos'>('todos')
   const [inscripcion, setInscripcion] = useState<EventItem | null>(null)
   const cerrarInscripcion = useCallback(() => setInscripcion(null), [])
-  const cerrarInscripcion = useCallback(() => setInscripcion(null), [])
 
   const load = useCallback(() => {
     setState({ status: 'loading' })
